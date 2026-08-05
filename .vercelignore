@@ -1,0 +1,18 @@
+# Files/dirs to exclude from Vercel deployment
+.next
+db
+dev.log
+server.log
+download
+examples
+mini-services
+skills
+tests
+.zscripts
+.vercel
+tool-results
+*.md
+.env
+.env.local
+.vercelignore
+Dockerfile

@@ -58,7 +58,6 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        // @ts-expect-error augment
         session.user.id = token.id as string
       }
       return session
