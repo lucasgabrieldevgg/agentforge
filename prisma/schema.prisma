@@ -1,0 +1,84 @@
+// AgentForge — Plataforma de agentes com ferramentas
+// Usuário cola suas próprias API keys (OpenRouter, OpenWeather, etc)
+// Agente usa tools dinamicamente. Memória diária em TXT.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  apiKeys       ApiKey[]
+  integrations  Integration[]
+  dailyLogs     DailyLog[]
+  conversations Conversation[]
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  userId    String
+  service   String // openrouter | openweather | gmail | whatsapp | ...
+  keyValue  String // stored plaintext for dev (encrypt in prod)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, service])
+}
+
+model Integration {
+  id        String   @id @default(cuid())
+  userId    String
+  service   String // weather | gmail | whatsapp | memory | time | ...
+  enabled   Boolean  @default(false)
+  config    String   @default("{}") // JSON
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, service])
+}
+
+model DailyLog {
+  id        String   @id @default(cuid())
+  userId    String
+  date      String   // YYYY-MM-DD
+  content   String   @default("")
+  isClosed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String   // user | assistant | tool
+  content   String
+  toolName  String?
+  toolArgs  String?  // JSON
+  toolResult String?
+  toolCalls String?  // JSON array of all tool calls for this message
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
