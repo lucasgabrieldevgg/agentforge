@@ -4,6 +4,7 @@ import type { ToolSchema } from "@/lib/tools/registry"
 export type ToolContext = {
   userId: string
   userTimezone?: string
+  deepResearchLevel?: "quick" | "deep" | "max"
   getApiKey: (service: string) => Promise<string | null>
 }
 
@@ -234,20 +235,60 @@ async function tool_search_wikipedia(
   }
 }
 
+// Deep Research levels — configurable per user
+// - "quick": 1 language only (pt), no related articles. Fastest.
+// - "deep":  3 languages in parallel (pt, en, es) + 3 related articles. Default.
+// - "max":   5 languages in parallel (pt, en, es, fr, de) + 5 related articles.
+//            Slowest but most comprehensive.
+type DeepResearchLevel = "quick" | "deep" | "max"
+
+const DEEP_RESEARCH_CONFIG: Record<
+  DeepResearchLevel,
+  { langs: string[]; relatedCount: number; description: string }
+> = {
+  quick: {
+    langs: ["pt"],
+    relatedCount: 0,
+    description: "Rápido: 1 idioma (pt), sem artigos relacionados. ~1s.",
+  },
+  deep: {
+    langs: ["pt", "en", "es"],
+    relatedCount: 3,
+    description: "Profundo: 3 idiomas em paralelo (pt, en, es) + 3 relacionados. ~3s. (padrão)",
+  },
+  max: {
+    langs: ["pt", "en", "es", "fr", "de"],
+    relatedCount: 5,
+    description: "Máximo: 5 idiomas em paralelo + 5 relacionados. ~5s. Mais completo.",
+  },
+}
+
 async function tool_deep_research(
   args: Record<string, unknown>,
-  _ctx: ToolContext
+  ctx: ToolContext
 ): Promise<ToolCallResult> {
   const query = String(args.query || "").trim()
   if (!query) return { ok: false, error: "query vazio" }
 
-  // Parse langs (comma-separated), default to pt,en,es. Max 5.
-  const langsArg = String(args.langs || "pt,en,es")
+  // Determine level: explicit arg > user setting > default
+  const argLevel = String(args.level || "").toLowerCase()
+  const userLevel = (ctx.deepResearchLevel || "deep") as DeepResearchLevel
+  const level: DeepResearchLevel =
+    argLevel === "quick" || argLevel === "deep" || argLevel === "max"
+      ? argLevel
+      : ["quick", "deep", "max"].includes(userLevel)
+      ? userLevel
+      : "deep"
+
+  const config = DEEP_RESEARCH_CONFIG[level]
+
+  // Allow explicit override of langs (still capped at 5)
+  const argLangs = String(args.langs || "")
     .split(",")
     .map((l) => l.trim().toLowerCase().slice(0, 5))
     .filter(Boolean)
     .slice(0, 5)
-  const langs = langsArg.length > 0 ? langsArg : ["pt", "en", "es"]
+  const langs = argLangs.length > 0 ? argLangs : config.langs
 
   // Step 1: Search across all requested languages IN PARALLEL
   const searchPromises = langs.map(async (lang) => {
@@ -262,6 +303,7 @@ async function tool_deep_research(
       ok: true,
       result: {
         query,
+        level,
         langs_searched: langs,
         found: false,
         message: `Nenhum artigo encontrado para "${query}" em ${langs.join(", ")}.`,
@@ -273,45 +315,50 @@ async function tool_deep_research(
   const primary = found[0]
   let related: Array<{ title: string; extract: string; url?: string }> = []
 
-  try {
-    // Use the "search" API to get up to 3 more related articles in primary lang
-    const searchUrl = `https://${primary.lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
-      query
-    )}&format=json&origin=*&srlimit=4`
-    const searchRes = await fetch(searchUrl)
-    if (searchRes.ok) {
-      const searchData = await searchRes.json()
-      const relatedTitles = (searchData.query?.search || [])
-        .slice(1) // skip first (already got it)
-        .map((r: { title: string }) => r.title)
+  if (config.relatedCount > 0) {
+    try {
+      // Search for (relatedCount + 1) articles in primary lang (first is primary itself)
+      const searchUrl = `https://${primary.lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
+        query
+      )}&format=json&origin=*&srlimit=${config.relatedCount + 1}`
+      const searchRes = await fetch(searchUrl)
+      if (searchRes.ok) {
+        const searchData = await searchRes.json()
+        const relatedTitles = (searchData.query?.search || [])
+          .slice(1) // skip first (already got it)
+          .slice(0, config.relatedCount)
+          .map((r: { title: string }) => r.title)
 
-      // Fetch summaries for related articles in parallel
-      const relatedPromises = relatedTitles.map(async (title: string) => {
-        const sumUrl = `https://${primary.lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(
-          title.replace(/ /g, "_")
-        )}`
-        const sumRes = await fetch(sumUrl)
-        if (!sumRes.ok) return null
-        const sum = await sumRes.json()
-        if (!sum.extract) return null
-        return {
-          title: sum.title,
-          extract: sum.extract,
-          url: sum.content_urls?.desktop?.page,
-        }
-      })
-      related = (await Promise.all(relatedPromises)).filter(
-        (r): r is { title: string; extract: string; url?: string } => r !== null
-      )
+        // Fetch summaries for related articles in parallel
+        const relatedPromises = relatedTitles.map(async (title: string) => {
+          const sumUrl = `https://${primary.lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(
+            title.replace(/ /g, "_")
+          )}`
+          const sumRes = await fetch(sumUrl)
+          if (!sumRes.ok) return null
+          const sum = await sumRes.json()
+          if (!sum.extract) return null
+          return {
+            title: sum.title,
+            extract: sum.extract,
+            url: sum.content_urls?.desktop?.page,
+          }
+        })
+        related = (await Promise.all(relatedPromises)).filter(
+          (r): r is { title: string; extract: string; url?: string } => r !== null
+        )
+      }
+    } catch {
+      // ignore — related articles are nice-to-have
     }
-  } catch {
-    // ignore — related articles are nice-to-have
   }
 
   return {
     ok: true,
     result: {
       query,
+      level,
+      level_description: config.description,
       found: true,
       langs_searched: langs,
       langs_found: found.map((r) => r.lang),
@@ -328,7 +375,7 @@ async function tool_deep_research(
         lang: r.lang,
       })),
       related,
-      summary: `Encontrado em ${found.length} idioma(s): ${found
+      summary: `[Nível ${level.toUpperCase()}] Encontrado em ${found.length} idioma(s): ${found
         .map((r) => r.lang)
         .join(", ")}. ${related.length} artigo(s) relacionado(s) adicionais.`,
     },

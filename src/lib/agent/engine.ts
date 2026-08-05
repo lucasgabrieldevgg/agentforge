@@ -152,9 +152,20 @@ export async function runAgent(opts: {
     }
   }
 
+  // Load user's deep research level preference
+  const userRow = await db.user.findUnique({
+    where: { id: userId },
+    select: { deepResearchLevel: true },
+  })
+  const deepResearchLevel = (userRow?.deepResearchLevel || "deep") as
+    | "quick"
+    | "deep"
+    | "max"
+
   const ctx: ToolContext = {
     userId,
     userTimezone: "America/Cuiaba",
+    deepResearchLevel,
     getApiKey: async (service) => {
       const row = await db.apiKey.findUnique({
         where: { userId_service: { userId, service } },
