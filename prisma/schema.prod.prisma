@@ -1,14 +1,15 @@
-// AgentForge — DEV schema (SQLite)
-// Use: bun run db:push
-// For production (Vercel), schema.prod.prisma is used (Postgres).
+// AgentForge — PRODUCTION schema (Postgres on Vercel/Supabase)
+// Used by Vercel build via: bunx prisma generate --schema=prisma/schema.prod.prisma
+// And: bunx prisma db push --schema=prisma/schema.prod.prisma
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 model User {
@@ -29,6 +30,9 @@ model User {
   integrations  Integration[]
   dailyLogs     DailyLog[]
   conversations Conversation[]
+
+  @@index([lastActiveAt])
+  @@index([deactivatedAt])
 }
 
 model ApiKey {
@@ -86,4 +90,6 @@ model Conversation {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
