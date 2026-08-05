@@ -1,7 +1,8 @@
 // Vercel Cron route — runs daily at midnight
 // 1. Closes today's daily memory log
-// 2. Deactivates users inactive for > 30 days
-// 3. Deletes users inactive for > 90 days (cascade)
+// 2. Deactivates users inactive for > 14 days
+// 3. Deletes users inactive for > 30 days (cascade) → frees slots
+// 4. Offers freed slots to next-in-line on waitlist (72h to accept)
 //
 // Configure in vercel.json:
 //   "crons": [{ "path": "/api/cron/daily", "schedule": "0 0 * * *" }]
@@ -9,6 +10,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { runAutoDeletion } from "@/lib/activity"
+import { processWaitlist } from "@/lib/waitlist"
 
 export const dynamic = "force-dynamic"
 
@@ -26,8 +28,11 @@ export async function POST(req: Request) {
     data: { isClosed: true },
   })
 
-  // 2 + 3. Auto-deletion
+  // 2 + 3. Auto-deletion (frees slots if anyone was deleted)
   const deletion = await runAutoDeletion()
+
+  // 4. Process waitlist — offer freed slots to next in line
+  const waitlist = await processWaitlist()
 
   return NextResponse.json({
     ok: true,
@@ -35,6 +40,8 @@ export async function POST(req: Request) {
     closedLogs: closedLogs.count,
     deactivatedUsers: deletion.deactivated,
     deletedUsers: deletion.deleted,
+    waitlistExpired: waitlist.expired,
+    waitlistOffered: waitlist.offered,
   })
 }
 

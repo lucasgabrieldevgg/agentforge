@@ -2,7 +2,7 @@
 // When you change the text, bump the version. Users who accepted an older
 // version will be required to re-accept on next visit.
 
-export const TOS_VERSION = "1.0.0"
+export const TOS_VERSION = "1.1.0"
 export const TOS_DATE = "2026-08-05"
 
 export const TOS_TITLE = `Termos de Uso — AgentForge v${TOS_VERSION} (${TOS_DATE})`
@@ -36,24 +36,28 @@ Você pode desativar a coleta de telemetria a qualquer momento em **Settings →
 
 Para preservar recursos (estamos em free tier) e respeitar privacidade:
 
-- **30 dias sem login**: sua conta é **desativada** (login bloqueado, dados preservados).
-- **90 dias sem login**: sua conta e **todos os seus dados são permanentemente deletados**.
+- **14 dias sem login**: sua conta é **desativada** (login bloqueado, dados preservados).
+- **30 dias sem login**: sua conta e **todos os seus dados são permanentemente deletados**.
 
-Para evitar a deleção, basta fazer login pelo menos uma vez a cada 90 dias.
+Para evitar a deleção, basta fazer login pelo menos uma vez a cada 30 dias.
 
-## 6. Segurança
+## 6. Lista de espera (waitlist)
+
+Quando a plataforma atinge o limite de usuários ativos do Supabase Free Tier (~668 usuários), novos cadastros entram em uma **fila de espera**. Quando uma vaga libera (por inatividade ou deleção), o próximo da fila é notificado e tem **72 horas** para aceitar. Se não aceitar, a vaga vai para o próximo.
+
+## 7. Segurança
 
 Suas chaves de API são armazenadas no banco de dados da plataforma. Em produção elas são criptografadas em repouso. Recomendamos que você use chaves com limites de uso configurados (a maioria dos provedores suporta isso).
 
-## 7. Responsabilidade
+## 8. Responsabilidade
 
 A plataforma é fornecida "como está", sem garantias. Não somos responsáveis por danos decorrentes do uso (perda de dados, custos de API, respostas incorretas do agente, etc).
 
-## 8. Mudanças nos termos
+## 9. Mudanças nos termos
 
 Podemos atualizar estes termos a qualquer momento. Se houver mudança material, você verá uma nova tela de aceite no próximo login.
 
-## 9. Contato
+## 10. Contato
 
 Para dúvidas sobre privacidade ou seus dados: fale com o bot @NoesisGGBot no Telegram, ou abra uma issue no GitHub.
 

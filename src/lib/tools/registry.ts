@@ -124,8 +124,9 @@ export const INTEGRATIONS: IntegrationDef[] = [
   },
   {
     service: "wikipedia",
-    name: "Wikipedia",
-    description: "Busca resumos na Wikipedia em português. Gratuito, sem chave de API.",
+    name: "Wikipedia Multi-idioma",
+    description:
+      "Busca resumos na Wikipedia em qualquer idioma (PT, EN, ES, FR, DE, etc). Gratuito, sem chave de API.",
     category: "knowledge",
     icon: "BookOpen",
     needsApiKey: false,
@@ -133,12 +134,41 @@ export const INTEGRATIONS: IntegrationDef[] = [
     tools: [
       {
         name: "search_wikipedia",
-        description: "Busca um resumo na Wikipedia em português sobre qualquer assunto.",
+        description:
+          "Busca um resumo na Wikipedia sobre qualquer assunto. " +
+          "Você pode especificar o idioma (padrão: pt). Use EN para tópicos técnicos, PT para tópicos brasileiros, etc. " +
+          "Se o artigo não existir no idioma pedido, a ferramenta tenta automaticamente outros idiomas.",
         parameters: {
           query: {
             type: "string",
-            description: "Termo de busca.",
+            description: "Termo de busca (no idioma de preferência).",
             required: true,
+          },
+          lang: {
+            type: "string",
+            description: "Código do idioma ISO 639-1 (ex: pt, en, es, fr, de, ja, zh). Padrão: pt.",
+            required: false,
+          },
+        },
+      },
+      {
+        name: "deep_research",
+        description:
+          "Pesquisa aprofundada: busca em múltiplos idiomas, coleta resumos de artigos relacionados " +
+          "e sintetiza um relatório completo. Use para perguntas complexas que exigem contexto de várias fontes. " +
+          "Mais lento que search_wikipedia, mas muito mais completo.",
+        parameters: {
+          query: {
+            type: "string",
+            description: "Tópico a pesquisar a fundo.",
+            required: true,
+          },
+          langs: {
+            type: "string",
+            description:
+              "Lista de idiomas para pesquisar, separados por vírgula (ex: 'pt,en,es'). " +
+              "Padrão: 'pt,en,es'. Máximo 5 idiomas.",
+            required: false,
           },
         },
       },

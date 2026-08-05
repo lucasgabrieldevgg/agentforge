@@ -7,10 +7,11 @@ import { LandingView } from "@/components/agentforge/landing-view"
 import { AuthView } from "@/components/agentforge/auth-view"
 import { Dashboard } from "@/components/agentforge/dashboard"
 import { ToSGate } from "@/components/agentforge/tos-gate"
+import { WaitlistView } from "@/components/agentforge/waitlist-view"
 
 export function AgentForge() {
   const { data: session, status } = useSession()
-  const { view, setView } = useAppStore()
+  const { view, setView, waitlistReason } = useAppStore()
   const [needsToS, setNeedsToS] = useState(false)
   const [checkingToS, setCheckingToS] = useState(true)
 
@@ -18,7 +19,6 @@ export function AgentForge() {
     if (status === "loading") return
     if (session?.user) {
       setView("dashboard")
-      // Check if user needs to accept ToS
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCheckingToS(true)
       fetch("/api/tos")
@@ -42,6 +42,10 @@ export function AgentForge() {
         </div>
       </div>
     )
+  }
+
+  if (view === "waitlist") {
+    return <WaitlistView reason={waitlistReason || "Capacidade máxima atingida."} />
   }
 
   if (view === "auth" && !session?.user) {

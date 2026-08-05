@@ -4,8 +4,8 @@
 
 import { db } from "@/lib/db"
 
-const DEACTIVATE_AFTER_DAYS = 30
-const DELETE_AFTER_DAYS = 90
+const DEACTIVATE_AFTER_DAYS = 14
+const DELETE_AFTER_DAYS = 30
 
 export async function updateLastActive(userId: string): Promise<void> {
   try {
