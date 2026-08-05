@@ -249,20 +249,29 @@ export function SettingsTab() {
         <div className="space-y-2 text-sm">
           <div className="flex items-start gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
-            <span><strong>30 dias sem login</strong> → conta desativada (login bloqueado, dados preservados).</span>
+            <span><strong>14 dias sem login</strong> → conta desativada (login bloqueado, dados preservados).</span>
           </div>
           <div className="flex items-start gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
-            <span><strong>90 dias sem login</strong> → conta e todos os dados <strong>permanentemente deletados</strong>.</span>
+            <span><strong>30 dias sem login</strong> → conta e todos os dados <strong>permanentemente deletados</strong>.</span>
           </div>
           <div className="flex items-start gap-2">
             <Trash2 className="w-3 h-3 text-muted-foreground mt-2 shrink-0" />
             <span className="text-xs text-muted-foreground">
-              Política necessária pra caber no free tier do Supabase e respeitar privacidade.
-              Faça login 1x a cada 90 dias pra manter sua conta.
+              Política necessária pra caber no free tier do Supabase (~668 usuários ativos).
+              Faça login 1x a cada 30 dias pra manter sua conta.
             </span>
           </div>
         </div>
+      </Card>
+
+      {/* Capacity / Waitlist */}
+      <Card className="p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Server className="w-4 h-4 text-primary" />
+          <h3 className="font-semibold">Capacidade da plataforma</h3>
+        </div>
+        <CapacityInfo />
       </Card>
 
       {/* Agente */}
@@ -378,8 +387,57 @@ export function SettingsTab() {
       </Card>
 
       <p className="text-center text-xs text-muted-foreground font-mono pt-4">
-        AgentForge v0.2.0 · Noesis Labs · MIT License
+        AgentForge v0.3.0 · Noesis Labs · MIT License
       </p>
+    </div>
+  )
+}
+
+function CapacityInfo() {
+  const [data, setData] = useState<{
+    activeUsers: number
+    waitingUsers: number
+    maxActive: number
+    isWaitlistMode: boolean
+    slotsAvailable: number
+  } | null>(null)
+
+  useEffect(() => {
+    fetch("/api/capacity")
+      .then((r) => r.json())
+      .then(setData)
+      .catch(() => {})
+  }, [])
+
+  if (!data) return <Skeleton className="h-12" />
+
+  const pct = Math.min(100, Math.round((data.activeUsers / data.maxActive) * 100))
+  return (
+    <div className="space-y-2 text-sm">
+      <div className="flex justify-between items-center">
+        <span className="text-muted-foreground">Usuários ativos</span>
+        <span className="font-mono">
+          {data.activeUsers} / {data.maxActive}
+        </span>
+      </div>
+      <div className="w-full h-2 rounded-full bg-secondary overflow-hidden">
+        <div
+          className={`h-full transition-all ${
+            pct > 90 ? "bg-destructive" : pct > 75 ? "bg-amber-500" : "bg-primary"
+          }`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="text-muted-foreground">Pessoas na fila</span>
+        <span className="font-mono">{data.waitingUsers}</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="text-muted-foreground">Modo atual</span>
+        <span className={`font-mono ${data.isWaitlistMode ? "text-amber-400" : "text-primary"}`}>
+          {data.isWaitlistMode ? "LISTA DE ESPERA" : "ABERTO"}
+        </span>
+      </div>
     </div>
   )
 }

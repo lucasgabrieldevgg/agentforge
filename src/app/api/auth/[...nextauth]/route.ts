@@ -2,6 +2,7 @@ import NextAuth, { type NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { db } from "@/lib/db"
+import { canSignupDirectly, acceptWaitlistOffer } from "@/lib/waitlist"
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -21,6 +22,19 @@ export const authOptions: NextAuthOptions = {
         if (mode === "signup") {
           const existing = await db.user.findUnique({ where: { email } })
           if (existing) throw new Error("Email já cadastrado")
+
+          // Check capacity — if full, refuse
+          // BUT: if user has an "offered" waitlist entry, allow (they were given a slot)
+          const waitlistEntry = await db.waitlistEntry.findUnique({ where: { email } })
+          const hasOffer = waitlistEntry?.status === "offered"
+
+          if (!hasOffer) {
+            const check = await canSignupDirectly()
+            if (!check.allowed) {
+              throw new Error(`WAITLIST:${check.reason || "Capacidade cheia"}`)
+            }
+          }
+
           const hash = await bcrypt.hash(creds.password, 10)
           const name = creds.name?.trim() || email.split("@")[0]
           const user = await db.user.create({
@@ -33,6 +47,10 @@ export const authOptions: NextAuthOptions = {
               { userId: user.id, service: "memory", enabled: true, config: "{}" },
             ],
           })
+          // If came from waitlist, mark as accepted
+          if (hasOffer) {
+            await acceptWaitlistOffer(email)
+          }
           return { id: user.id, email: user.email, name: user.name }
         }
 
@@ -41,6 +59,15 @@ export const authOptions: NextAuthOptions = {
         if (!user) throw new Error("Usuário não encontrado")
         const ok = await bcrypt.compare(creds.password, user.password)
         if (!ok) throw new Error("Senha incorreta")
+
+        // If user was deactivated, reactivate them (they just need to log in)
+        if (user.deactivatedAt) {
+          await db.user.update({
+            where: { id: user.id },
+            data: { deactivatedAt: null, lastActiveAt: new Date() },
+          })
+        }
+
         return { id: user.id, email: user.email, name: user.name }
       },
     }),

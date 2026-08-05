@@ -73,6 +73,20 @@ model DailyLog {
   @@unique([userId, date])
 }
 
+model WaitlistEntry {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  name        String?
+  position    Int       @default(0)
+  status      String    @default("waiting") // waiting | offered | accepted | expired | removed
+  notifiedAt  DateTime?
+  offerExpiresAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, position])
+}
+
 model Conversation {
   id        String   @id @default(cuid())
   userId    String

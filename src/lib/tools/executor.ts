@@ -158,33 +158,179 @@ async function tool_get_forecast(
   return { ok: true, result: { city: data.city?.name, forecast: list } }
 }
 
+// Supported Wikipedia languages (ISO 639-1)
+const WIKI_FALLBACK_LANGS = ["pt", "en", "es", "fr", "de", "ja", "zh"]
+
+async function fetchWikiSummary(
+  query: string,
+  lang: string
+): Promise<{ found: boolean; title?: string; extract?: string; url?: string; lang?: string }> {
+  // Step 1: search for best matching article in this language
+  const searchUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
+    query
+  )}&format=json&origin=*&srlimit=1`
+  const searchRes = await fetch(searchUrl)
+  if (!searchRes.ok) return { found: false }
+  const searchData = await searchRes.json()
+  const first = searchData.query?.search?.[0]
+  if (!first) return { found: false }
+
+  // Step 2: fetch summary via REST API
+  const summaryUrl = `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(
+    first.title.replace(/ /g, "_")
+  )}`
+  const sumRes = await fetch(summaryUrl)
+  if (!sumRes.ok) return { found: false }
+  const sum = await sumRes.json()
+  if (!sum.extract) return { found: false }
+  return {
+    found: true,
+    title: sum.title,
+    extract: sum.extract,
+    url: sum.content_urls?.desktop?.page,
+    lang,
+  }
+}
+
 async function tool_search_wikipedia(
   args: Record<string, unknown>,
   _ctx: ToolContext
 ): Promise<ToolCallResult> {
   const query = String(args.query || "").trim()
   if (!query) return { ok: false, error: "query vazio" }
-  const searchUrl = `https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
-    query
-  )}&format=json&origin=*`
-  const searchRes = await fetch(searchUrl)
-  if (!searchRes.ok) return { ok: false, error: "Wikipedia search failed" }
-  const searchData = await searchRes.json()
-  const first = searchData.query?.search?.[0]
-  if (!first) return { ok: true, result: { found: false } }
-  // fetch summary
-  const summaryUrl = `https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(
-    first.title
-  )}`
-  const sumRes = await fetch(summaryUrl)
-  if (!sumRes.ok) return { ok: false, error: "Wikipedia summary failed" }
-  const sum = await sumRes.json()
+  const requestedLang = String(args.lang || "pt").toLowerCase().trim().slice(0, 5)
+
+  // Try requested language first, then fall back through others
+  const orderedLangs = [
+    requestedLang,
+    ...WIKI_FALLBACK_LANGS.filter((l) => l !== requestedLang),
+  ]
+
+  for (const lang of orderedLangs) {
+    const result = await fetchWikiSummary(query, lang)
+    if (result.found) {
+      return {
+        ok: true,
+        result: {
+          found: true,
+          title: result.title,
+          extract: result.extract,
+          url: result.url,
+          lang: result.lang,
+          langs_tried: orderedLangs.slice(0, orderedLangs.indexOf(lang) + 1),
+        },
+      }
+    }
+  }
+
   return {
     ok: true,
     result: {
-      title: sum.title,
-      extract: sum.extract,
-      url: sum.content_urls?.desktop?.page,
+      found: false,
+      query,
+      langs_tried: orderedLangs,
+      message: `Nenhum artigo encontrado para "${query}" em nenhum dos idiomas tentados.`,
+    },
+  }
+}
+
+async function tool_deep_research(
+  args: Record<string, unknown>,
+  _ctx: ToolContext
+): Promise<ToolCallResult> {
+  const query = String(args.query || "").trim()
+  if (!query) return { ok: false, error: "query vazio" }
+
+  // Parse langs (comma-separated), default to pt,en,es. Max 5.
+  const langsArg = String(args.langs || "pt,en,es")
+    .split(",")
+    .map((l) => l.trim().toLowerCase().slice(0, 5))
+    .filter(Boolean)
+    .slice(0, 5)
+  const langs = langsArg.length > 0 ? langsArg : ["pt", "en", "es"]
+
+  // Step 1: Search across all requested languages IN PARALLEL
+  const searchPromises = langs.map(async (lang) => {
+    const result = await fetchWikiSummary(query, lang)
+    return { lang, ...result }
+  })
+  const results = await Promise.all(searchPromises)
+  const found = results.filter((r) => r.found)
+
+  if (found.length === 0) {
+    return {
+      ok: true,
+      result: {
+        query,
+        langs_searched: langs,
+        found: false,
+        message: `Nenhum artigo encontrado para "${query}" em ${langs.join(", ")}.`,
+      },
+    }
+  }
+
+  // Step 2: For the primary language found, also fetch related articles
+  const primary = found[0]
+  let related: Array<{ title: string; extract: string; url?: string }> = []
+
+  try {
+    // Use the "search" API to get up to 3 more related articles in primary lang
+    const searchUrl = `https://${primary.lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
+      query
+    )}&format=json&origin=*&srlimit=4`
+    const searchRes = await fetch(searchUrl)
+    if (searchRes.ok) {
+      const searchData = await searchRes.json()
+      const relatedTitles = (searchData.query?.search || [])
+        .slice(1) // skip first (already got it)
+        .map((r: { title: string }) => r.title)
+
+      // Fetch summaries for related articles in parallel
+      const relatedPromises = relatedTitles.map(async (title: string) => {
+        const sumUrl = `https://${primary.lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(
+          title.replace(/ /g, "_")
+        )}`
+        const sumRes = await fetch(sumUrl)
+        if (!sumRes.ok) return null
+        const sum = await sumRes.json()
+        if (!sum.extract) return null
+        return {
+          title: sum.title,
+          extract: sum.extract,
+          url: sum.content_urls?.desktop?.page,
+        }
+      })
+      related = (await Promise.all(relatedPromises)).filter(
+        (r): r is { title: string; extract: string; url?: string } => r !== null
+      )
+    }
+  } catch {
+    // ignore — related articles are nice-to-have
+  }
+
+  return {
+    ok: true,
+    result: {
+      query,
+      found: true,
+      langs_searched: langs,
+      langs_found: found.map((r) => r.lang),
+      primary: {
+        title: primary.title,
+        extract: primary.extract,
+        url: primary.url,
+        lang: primary.lang,
+      },
+      translations: found.slice(1).map((r) => ({
+        title: r.title,
+        extract: r.extract,
+        url: r.url,
+        lang: r.lang,
+      })),
+      related,
+      summary: `Encontrado em ${found.length} idioma(s): ${found
+        .map((r) => r.lang)
+        .join(", ")}. ${related.length} artigo(s) relacionado(s) adicionais.`,
     },
   }
 }
@@ -230,6 +376,7 @@ export const TOOL_IMPLEMENTATIONS: Record<
   get_weather: tool_get_weather,
   get_forecast: tool_get_forecast,
   search_wikipedia: tool_search_wikipedia,
+  deep_research: tool_deep_research,
   calculate: tool_calculate,
 }
 

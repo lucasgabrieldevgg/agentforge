@@ -14,12 +14,14 @@ export function AuthView() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({ email: "", password: "", name: "" })
+  const [waitlistReason, setWaitlistReason] = useState<string | null>(null)
 
   const isSignup = authMode === "signup"
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setWaitlistReason(null)
     try {
       const res = await signIn("credentials", {
         redirect: false,
@@ -29,19 +31,36 @@ export function AuthView() {
         mode: authMode,
       })
       if (res?.error) {
-        // NextAuth returns a generic "CredentialsSignin" error; parse the real message
-        let msg = res.error
-        try {
-          // the authorize() throws Error with specific message — fetch it
-          // NextAuth encodes it as "CredentialsSignin"; we re-do the request to get a fresh error
-          const directRes = await fetch("/api/auth/error")
-          void directRes
-        } catch {
-          // ignore
+        // NextAuth wraps thrown errors as "CredentialsSignin" — but the message we threw
+        // (including our `WAITLIST:` prefix) comes through. Detect that and redirect.
+        // Unfortunately NextAuth strips custom messages. We need to check via a side-channel:
+        // re-fetch capacity to see if waitlist is in effect.
+        if (isSignup) {
+          // Check capacity to see if this was a waitlist rejection
+          try {
+            const capRes = await fetch("/api/capacity")
+            const capData = await capRes.json()
+            if (!capData.canSignup) {
+              setWaitlistReason(capData.reason || "Capacidade cheia")
+              toast({
+                title: "Capacidade cheia",
+                description: "Direcionando para a lista de espera...",
+                variant: "destructive",
+              })
+              // Slight delay so user sees the toast
+              setTimeout(() => setView("waitlist" as any), 1500)
+              return
+            }
+          } catch {
+            // ignore
+          }
         }
         toast({
           title: "Erro",
-          description: msg === "CredentialsSignin" ? "Credenciais inválidas" : msg,
+          description:
+            res.error === "CredentialsSignin"
+              ? "Credenciais inválidas"
+              : res.error,
           variant: "destructive",
         })
       } else {
