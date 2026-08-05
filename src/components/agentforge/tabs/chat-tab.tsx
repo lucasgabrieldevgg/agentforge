@@ -18,12 +18,18 @@ import {
   Loader2,
   Sparkles,
   AlertCircle,
+  Brain,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react"
 
 type Msg = {
   id: string
   role: "user" | "assistant"
   content: string
+  thinking?: string
+  thinkingSource?: "native" | "synthetic" | "none"
+  model?: string
   toolCalls?: Array<{
     name: string
     args: Record<string, unknown>
@@ -39,6 +45,7 @@ export function ChatTab() {
   const [loading, setLoading] = useState(false)
   const [voiceMode, setVoiceMode] = useState(false)
   const [ttsEnabled, setTtsEnabled] = useState(true)
+  const [thinkingEnabled, setThinkingEnabled] = useState(false)
   const [hydrated, setHydrated] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
@@ -59,6 +66,7 @@ export function ChatTab() {
               role: m.role,
               content: m.content,
               toolCalls: m.toolCalls ? JSON.parse(m.toolCalls) : undefined,
+              model: m.model,
               ts: new Date(m.createdAt).getTime(),
             }))
           )
@@ -98,7 +106,11 @@ export function ChatTab() {
         const res = await fetch("/api/agent/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: trimmed, history }),
+          body: JSON.stringify({
+            message: trimmed,
+            history,
+            thinking: thinkingEnabled,
+          }),
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || "Erro no agente")
@@ -106,6 +118,9 @@ export function ChatTab() {
           id: crypto.randomUUID(),
           role: "assistant",
           content: data.reply,
+          thinking: data.thinking,
+          thinkingSource: data.thinkingSource,
+          model: data.model,
           toolCalls: data.toolCalls,
           ts: Date.now(),
         }
@@ -130,7 +145,7 @@ export function ChatTab() {
         setLoading(false)
       }
     },
-    [loading, messages, ttsEnabled, ttsSupported, speak, toast]
+    [loading, messages, ttsEnabled, ttsSupported, speak, toast, thinkingEnabled]
   )
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -235,45 +250,7 @@ export function ChatTab() {
           )}
 
           {messages.map((m) => (
-            <div
-              key={m.id}
-              className={`flex gap-3 ${m.role === "user" ? "flex-row-reverse" : ""}`}
-            >
-              <div
-                className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${
-                  m.role === "user"
-                    ? "bg-secondary"
-                    : "bg-primary/10 border border-primary/30"
-                }`}
-              >
-                {m.role === "user" ? (
-                  <span className="text-xs font-mono">VC</span>
-                ) : (
-                  <Sparkles className="w-4 h-4 text-primary" />
-                )}
-              </div>
-              <div className={`max-w-[85%] space-y-2`}>
-                <div
-                  className={`rounded-lg px-3 py-2 text-sm leading-relaxed ${
-                    m.role === "user"
-                      ? "bg-secondary text-secondary-foreground"
-                      : "bg-card border border-border/60"
-                  }`}
-                >
-                  {m.content}
-                </div>
-                {m.toolCalls && m.toolCalls.length > 0 && (
-                  <div className="space-y-1">
-                    {m.toolCalls.map((tc, idx) => (
-                      <ToolCallBadge key={idx} tc={tc} />
-                    ))}
-                  </div>
-                )}
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  {new Date(m.ts).toLocaleTimeString("pt-BR")}
-                </p>
-              </div>
-            </div>
+            <MessageBubble key={m.id} m={m} />
           ))}
 
           {loading && (
@@ -282,7 +259,8 @@ export function ChatTab() {
                 <Loader2 className="w-4 h-4 text-primary animate-spin" />
               </div>
               <div className="bg-card border border-border/60 rounded-lg px-3 py-2 text-sm text-muted-foreground font-mono">
-                pensando<span className="animate-pulse">...</span>
+                {thinkingEnabled ? "pensando profundamente" : "pensando"}
+                <span className="animate-pulse">...</span>
               </div>
             </div>
           )}
@@ -325,7 +303,7 @@ export function ChatTab() {
             </Button>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
               <Button
                 type="button"
                 variant="ghost"
@@ -361,6 +339,26 @@ export function ChatTab() {
                 type="button"
                 variant="ghost"
                 size="sm"
+                onClick={() => {
+                  const next = !thinkingEnabled
+                  setThinkingEnabled(next)
+                  toast({
+                    title: next ? "Modo Pensamento ativado" : "Modo Pensamento desativado",
+                    description: next
+                      ? "Modelos com thinking nativo usam direto. Outros recebem prompt CoT."
+                      : "Respostas diretas, sem raciocínio exposto.",
+                  })
+                }}
+                className={`text-xs font-mono ${thinkingEnabled ? "text-primary" : ""}`}
+                title="Ativa raciocínio explícito antes da resposta"
+              >
+                <Brain className="w-3 h-3 mr-1" />
+                {thinkingEnabled ? "Thinking ON" : "Thinking OFF"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={clearChat}
                 className="text-xs font-mono text-muted-foreground"
               >
@@ -380,6 +378,106 @@ export function ChatTab() {
           )}
         </form>
       </div>
+    </div>
+  )
+}
+
+function MessageBubble({ m }: { m: Msg }) {
+  return (
+    <div className={`flex gap-3 ${m.role === "user" ? "flex-row-reverse" : ""}`}>
+      <div
+        className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${
+          m.role === "user"
+            ? "bg-secondary"
+            : "bg-primary/10 border border-primary/30"
+        }`}
+      >
+        {m.role === "user" ? (
+          <span className="text-xs font-mono">VC</span>
+        ) : (
+          <Sparkles className="w-4 h-4 text-primary" />
+        )}
+      </div>
+      <div className="max-w-[85%] space-y-2">
+        {/* Thinking block — only for assistant messages with thinking content */}
+        {m.role === "assistant" && m.thinking && (
+          <ThinkingBlock thinking={m.thinking} source={m.thinkingSource} />
+        )}
+
+        <div
+          className={`rounded-lg px-3 py-2 text-sm leading-relaxed ${
+            m.role === "user"
+              ? "bg-secondary text-secondary-foreground"
+              : "bg-card border border-border/60"
+          }`}
+        >
+          {m.content}
+        </div>
+
+        {/* Model badge for assistant messages */}
+        {m.role === "assistant" && m.model && (
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
+            <Sparkles className="w-2.5 h-2.5" />
+            {m.model}
+          </div>
+        )}
+
+        {m.toolCalls && m.toolCalls.length > 0 && (
+          <div className="space-y-1">
+            {m.toolCalls.map((tc, idx) => (
+              <ToolCallBadge key={idx} tc={tc} />
+            ))}
+          </div>
+        )}
+        <p className="text-[10px] text-muted-foreground font-mono">
+          {new Date(m.ts).toLocaleTimeString("pt-BR")}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function ThinkingBlock({
+  thinking,
+  source,
+}: {
+  thinking: string
+  source?: "native" | "synthetic" | "none"
+}) {
+  const [open, setOpen] = useState(false)
+  const isNative = source === "native"
+  return (
+    <div className="rounded-lg border border-primary/30 bg-primary/5 overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-mono hover:bg-primary/10 transition-colors"
+      >
+        {open ? (
+          <ChevronDown className="w-3 h-3 text-primary" />
+        ) : (
+          <ChevronRight className="w-3 h-3 text-primary" />
+        )}
+        <Brain className="w-3 h-3 text-primary" />
+        <span className="text-primary font-semibold">Modo Pensamento</span>
+        <Badge
+          variant="outline"
+          className={`text-[9px] py-0 px-1 ml-1 ${
+            isNative
+              ? "text-primary border-primary/30"
+              : "text-amber-400 border-amber-500/30"
+          }`}
+        >
+          {isNative ? "NATIVO" : "SINTÉTICO"}
+        </Badge>
+        <span className="text-muted-foreground ml-auto">
+          {thinking.length} chars · {open ? "ocultar" : "ver"}
+        </span>
+      </button>
+      {open && (
+        <pre className="px-3 pb-3 pt-1 text-xs font-mono whitespace-pre-wrap break-words text-muted-foreground border-t border-primary/20">
+          {thinking}
+        </pre>
+      )}
     </div>
   )
 }

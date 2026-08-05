@@ -21,6 +21,8 @@ type TelemetryPayload = {
   timestamp: string
   user_message: string
   assistant_response: string
+  thinking?: string
+  thinking_source?: "native" | "synthetic" | "none"
   tool_calls: Array<{ name: string; ok: boolean }>
   platform_version: string
 }
