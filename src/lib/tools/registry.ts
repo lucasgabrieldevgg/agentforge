@@ -156,18 +156,28 @@ export const INTEGRATIONS: IntegrationDef[] = [
         description:
           "Pesquisa aprofundada: busca em múltiplos idiomas, coleta resumos de artigos relacionados " +
           "e sintetiza um relatório completo. Use para perguntas complexas que exigem contexto de várias fontes. " +
-          "Mais lento que search_wikipedia, mas muito mais completo.",
+          "Mais lento que search_wikipedia, mas muito mais completo. " +
+          "Níveis: 'quick' (1 idioma, sem relacionados), 'deep' (3 idiomas + 3 relacionados, padrão), " +
+          "'max' (5 idiomas + 5 relacionados). O usuário pode configurar o padrão nas Settings.",
         parameters: {
           query: {
             type: "string",
             description: "Tópico a pesquisar a fundo.",
             required: true,
           },
+          level: {
+            type: "string",
+            description:
+              "Nível de profundidade: 'quick', 'deep' ou 'max'. " +
+              "Se omitido, usa o padrão do usuário (configurável em Settings).",
+            required: false,
+            enum: ["quick", "deep", "max"],
+          },
           langs: {
             type: "string",
             description:
               "Lista de idiomas para pesquisar, separados por vírgula (ex: 'pt,en,es'). " +
-              "Padrão: 'pt,en,es'. Máximo 5 idiomas.",
+              "Sobrescreve o nível. Máximo 5 idiomas.",
             required: false,
           },
         },

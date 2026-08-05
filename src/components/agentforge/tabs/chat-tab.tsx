@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { useSpeechRecognition, useSpeechSynthesis } from "@/hooks/use-speech"
 import {
@@ -21,6 +28,10 @@ import {
   Brain,
   ChevronDown,
   ChevronRight,
+  Telescope,
+  Zap,
+  Layers,
+  Crown,
 } from "lucide-react"
 
 type Msg = {
@@ -46,6 +57,7 @@ export function ChatTab() {
   const [voiceMode, setVoiceMode] = useState(false)
   const [ttsEnabled, setTtsEnabled] = useState(true)
   const [thinkingEnabled, setThinkingEnabled] = useState(false)
+  const [deepResearchLevel, setDeepResearchLevel] = useState<"quick" | "deep" | "max">("deep")
   const [hydrated, setHydrated] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
@@ -73,7 +85,40 @@ export function ChatTab() {
         }
       })
       .catch(() => {})
+    // Load deep research level preference
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.deepResearchLevel) setDeepResearchLevel(d.deepResearchLevel)
+      })
+      .catch(() => {})
   }, [])
+
+  const changeDeepResearchLevel = async (level: "quick" | "deep" | "max") => {
+    setDeepResearchLevel(level)
+    try {
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deepResearchLevel: level }),
+      })
+      const names = { quick: "Quick", deep: "Deep", max: "Max" }
+      toast({
+        title: "Deep Research: " + names[level],
+        description: {
+          quick: "Rápido: 1 idioma, sem relacionados.",
+          deep: "Profundo: 3 idiomas + 3 relacionados.",
+          max: "Máximo: 5 idiomas + 5 relacionados.",
+        }[level],
+      })
+    } catch (e) {
+      toast({
+        title: "Erro ao salvar",
+        description: (e as Error).message,
+        variant: "destructive",
+      })
+    }
+  }
 
   useEffect(() => {
     if (transcript) setInput(transcript)
@@ -355,6 +400,37 @@ export function ChatTab() {
                 <Brain className="w-3 h-3 mr-1" />
                 {thinkingEnabled ? "Thinking ON" : "Thinking OFF"}
               </Button>
+              <div className="flex items-center gap-1 px-2 py-1 rounded-md border border-border/40 bg-secondary/40">
+                <Telescope className="w-3 h-3 text-primary" />
+                <Select
+                  value={deepResearchLevel}
+                  onValueChange={(v) => changeDeepResearchLevel(v as "quick" | "deep" | "max")}
+                >
+                  <SelectTrigger className="h-6 w-[110px] text-xs font-mono border-0 bg-transparent p-0 focus:ring-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="quick" className="text-xs font-mono">
+                      <div className="flex items-center gap-2">
+                        <Zap className="w-3 h-3 text-amber-400" />
+                        <span>Quick</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="deep" className="text-xs font-mono">
+                      <div className="flex items-center gap-2">
+                        <Layers className="w-3 h-3 text-primary" />
+                        <span>Deep</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="max" className="text-xs font-mono">
+                      <div className="flex items-center gap-2">
+                        <Crown className="w-3 h-3 text-purple-400" />
+                        <span>Max</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Button
                 type="button"
                 variant="ghost"

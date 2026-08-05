@@ -13,18 +13,20 @@ datasource db {
 }
 
 model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
-  name           String?
-  password       String
-  anonymizedId   String    @unique @default(cuid())
-  telemetryOptIn Boolean   @default(true)
-  tosAcceptedAt  DateTime?
-  tosVersion     String?
-  lastActiveAt   DateTime? @default(now())
-  deactivatedAt  DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  password          String
+  anonymizedId      String    @unique @default(cuid())
+  telemetryOptIn    Boolean   @default(true)
+  tosAcceptedAt     DateTime?
+  tosVersion        String?
+  // Deep research level: "quick" | "deep" | "max"
+  deepResearchLevel String    @default("deep")
+  lastActiveAt      DateTime? @default(now())
+  deactivatedAt     DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   apiKeys       ApiKey[]
   integrations  Integration[]
