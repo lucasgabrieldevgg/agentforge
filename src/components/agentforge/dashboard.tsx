@@ -14,9 +14,11 @@ import {
   LogOut,
   Github,
   Clock,
+  Sparkles,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { ChatTab } from "@/components/agentforge/tabs/chat-tab"
+import { SkillsTab } from "@/components/agentforge/tabs/skills-tab"
 import { IntegrationsTab } from "@/components/agentforge/tabs/integrations-tab"
 import { KeysTab } from "@/components/agentforge/tabs/keys-tab"
 import { MemoryTab } from "@/components/agentforge/tabs/memory-tab"
@@ -24,7 +26,8 @@ import { SettingsTab } from "@/components/agentforge/tabs/settings-tab"
 
 const TABS: { id: DashboardTab; label: string; icon: typeof MessageSquare }[] = [
   { id: "chat", label: "Agente", icon: MessageSquare },
-  { id: "integrations", label: "Integrações", icon: Plug },
+  { id: "skills", label: "Skills", icon: Sparkles },
+  { id: "integrations", label: "Ferramentas", icon: Plug },
   { id: "keys", label: "API Keys", icon: KeyRound },
   { id: "memory", label: "Memória", icon: Brain },
   { id: "settings", label: "Settings", icon: Settings },
@@ -183,6 +186,7 @@ export function Dashboard() {
         {/* Main content */}
         <main className="flex-1 min-w-0 overflow-hidden">
           {activeTab === "chat" && <ChatTab />}
+          {activeTab === "skills" && <SkillsTab />}
           {activeTab === "integrations" && <IntegrationsTab />}
           {activeTab === "keys" && <KeysTab />}
           {activeTab === "memory" && <MemoryTab />}

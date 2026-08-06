@@ -12,7 +12,7 @@ export async function GET() {
   }
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { tosAcceptedAt: true, tosVersion: true, telemetryOptIn: true },
+    select: { tosAcceptedAt: true, tosVersion: true },
   })
   return NextResponse.json({
     version: TOS_VERSION,
@@ -22,7 +22,6 @@ export async function GET() {
     acceptedAt: user?.tosAcceptedAt,
     acceptedVersion: user?.tosVersion,
     needsAcceptance: !user?.tosVersion || user.tosVersion !== TOS_VERSION,
-    telemetryOptIn: user?.telemetryOptIn ?? true,
   })
 }
 
@@ -32,7 +31,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
   }
   const body = await req.json().catch(() => ({}))
-  const { accept, telemetryOptIn } = body as { accept?: boolean; telemetryOptIn?: boolean }
+  const { accept } = body as { accept?: boolean }
   if (!accept) {
     return NextResponse.json({ error: "Você precisa aceitar os termos" }, { status: 400 })
   }
@@ -41,7 +40,8 @@ export async function POST(req: Request) {
     data: {
       tosAcceptedAt: new Date(),
       tosVersion: TOS_VERSION,
-      telemetryOptIn: telemetryOptIn ?? true,
+      // Telemetry is mandatory, always on
+      telemetryOptIn: true,
     },
   })
   await updateLastActive(session.user.id)

@@ -200,7 +200,7 @@ export function WaitlistView({ reason }: { reason: string }) {
                 <CheckCircle2 className="w-3 h-3 text-primary shrink-0 mt-0.5" />
                 <span>
                   Quando sua vaga chegar, você receberá uma notificação no Telegram
-                  (@NoesisGGBot) e terá <strong>72 horas</strong> para se cadastrar. Se não
+                  (bot no Telegram) e terá <strong>72 horas</strong> para se cadastrar. Se não
                   aceitar, a vaga vai para o próximo.
                 </span>
               </p>

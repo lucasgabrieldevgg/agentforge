@@ -9,12 +9,15 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import {
   Clock,
-  Brain,
   CloudSun,
   BookOpen,
   Calculator,
   Mail,
   MessageCircle,
+  DollarSign,
+  Globe,
+  Ruler,
+  KeyRound,
   ExternalLink,
   CheckCircle2,
   AlertTriangle,
@@ -22,12 +25,15 @@ import {
 
 const ICONS: Record<string, typeof Clock> = {
   Clock,
-  Brain,
   CloudSun,
   BookOpen,
   Calculator,
   Mail,
   MessageCircle,
+  DollarSign,
+  Globe,
+  Ruler,
+  KeyRound,
 }
 
 type CatalogItem = {
@@ -46,6 +52,8 @@ type CatalogItem = {
 const CATEGORY_LABELS: Record<string, string> = {
   "built-in": "Embutido",
   weather: "Clima",
+  information: "Informação",
+  utility: "Utilitários",
   communication: "Comunicação",
   productivity: "Produtividade",
   knowledge: "Conhecimento",

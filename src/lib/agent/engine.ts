@@ -1,6 +1,13 @@
 import { db } from "@/lib/db"
 import { executeTool, type ToolContext } from "@/lib/tools/executor"
 import { getEnabledTools, type ToolSchema } from "@/lib/tools/registry"
+import {
+  getAutoTriggerSkills,
+  skillToToolSchema,
+  findSkillByCommand,
+  type SkillSchema,
+} from "@/lib/skills/registry"
+import { executeSkill, type SkillContext } from "@/lib/skills/executor"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Thinking mode
@@ -137,6 +144,14 @@ export async function runAgent(opts: {
   const enabledSchemas = getEnabledTools(integrations)
   const openRouterTools = enabledSchemas.map(schemaToOpenRouter)
 
+  // Load enabled skills
+  const enabledSkillNames = integrations
+    .filter((i) => i.service.startsWith("skill:") && i.enabled)
+    .map((i) => i.service.replace("skill:", ""))
+  const autoTriggerSkills = getAutoTriggerSkills(enabledSkillNames)
+  const skillTools = autoTriggerSkills.map(skillToToolSchema)
+  const allTools = [...openRouterTools, ...skillTools]
+
   const apiKeyRow = await db.apiKey.findUnique({
     where: { userId_service: { userId, service: "openrouter" } },
   })
@@ -157,9 +172,9 @@ export async function runAgent(opts: {
     where: { id: userId },
     select: { deepResearchLevel: true, preferredModel: true },
   })
-  const deepResearchLevel = (userRow?.deepResearchLevel || "deep") as
+  const deepResearchLevel = (userRow?.deepResearchLevel || "high") as
     | "quick"
-    | "deep"
+    | "high"
     | "max"
 
   const ctx: ToolContext = {
@@ -200,6 +215,108 @@ export async function runAgent(opts: {
   let lastNativeReasoning = ""
   let finalContent = ""
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Detect explicit /skill invocation (Slack/Discord style)
+  // If the user's message starts with /skillname, run that skill directly
+  // ─────────────────────────────────────────────────────────────────────────────
+  const slashMatch = userMessage.match(/^\/(\w+)\s*([\s\S]*)/)
+  if (slashMatch) {
+    const cmd = slashMatch[1].toLowerCase()
+    const rest = slashMatch[2].trim()
+    const skill = findSkillByCommand(cmd)
+    if (skill) {
+      // Check if skill is enabled for this user
+      if (!enabledSkillNames.includes(skill.name)) {
+        return {
+          reply: `A skill "/${cmd}" existe mas não está ativada. Vá em Skills no menu lateral para ativá-la.`,
+          thinking: "",
+          thinkingSource: "none",
+          modelUsed: selectedModel,
+          toolCalls: [],
+        }
+      }
+      // Parse args from rest: simple "key=value" or positional
+      const args = parseSkillArgs(rest, skill)
+      // Check if skill requires consent
+      if (skill.requires_consent) {
+        // For now, we just run it. Future: add a confirmation step.
+      }
+      const skillCtx: SkillContext = { userId, userTimezone: "America/Cuiaba" }
+      const result = await executeSkill(skill.builtin, args, skillCtx)
+      allToolCalls.push({
+        name: `skill_${skill.name}`,
+        args,
+        result: result.result ?? result.error ?? result.prompt,
+        ok: result.ok,
+      })
+
+      if (!result.ok) {
+        return {
+          reply: `Erro ao executar skill ${skill.display_name}: ${result.error}`,
+          thinking: "",
+          thinkingSource: "none",
+          modelUsed: selectedModel,
+          toolCalls: allToolCalls,
+        }
+      }
+
+      // Computational skill — return result directly
+      if (result.result) {
+        return {
+          reply: result.result,
+          thinking: "",
+          thinkingSource: "none",
+          modelUsed: selectedModel,
+          toolCalls: allToolCalls,
+        }
+      }
+
+      // LLM-powered skill — use the override prompt + system
+      const skillMessages: OpenRouterMessage[] = [
+        { role: "system", content: result.systemOverride || systemPrompt },
+        { role: "user", content: result.prompt || userMessage },
+      ]
+
+      const skillRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${openRouterKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://agentforge.local",
+          "X-Title": "AgentForge",
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          messages: skillMessages,
+          temperature: 0.7,
+        }),
+      })
+
+      if (!skillRes.ok) {
+        const errText = await skillRes.text()
+        return {
+          reply: `Erro ao chamar OpenRouter (${skillRes.status}): ${errText}`,
+          thinking: "",
+          thinkingSource: "none",
+          modelUsed: selectedModel,
+          toolCalls: allToolCalls,
+        }
+      }
+
+      const skillData = await skillRes.json()
+      const skillReply = skillData.choices?.[0]?.message?.content || ""
+      const skillThinking = skillData.choices?.[0]?.message?.reasoning || ""
+      return {
+        reply: skillReply,
+        thinking: thinkingEnabled ? skillThinking : "",
+        thinkingSource: skillThinking ? "native" : "none",
+        modelUsed: selectedModel,
+        toolCalls: allToolCalls,
+      }
+    }
+    // If /command doesn't match a skill, fall through and let the LLM handle it
+  }
+
   for (let iter = 0; iter < 5; iter++) {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -212,8 +329,8 @@ export async function runAgent(opts: {
       body: JSON.stringify({
         model: selectedModel,
         messages,
-        tools: openRouterTools.length ? openRouterTools : undefined,
-        tool_choice: openRouterTools.length ? "auto" : undefined,
+        tools: allTools.length ? allTools : undefined,
+        tool_choice: allTools.length ? "auto" : undefined,
         temperature: 0.7,
       }),
     })
@@ -297,19 +414,59 @@ export async function runAgent(opts: {
       } catch {
         args = {}
       }
-      const result = await executeTool(tc.function.name, args, ctx)
-      allToolCalls.push({
-        name: tc.function.name,
-        args,
-        result: result.result ?? result.error,
-        ok: result.ok,
-      })
-      messages.push({
-        role: "tool",
-        tool_call_id: tc.id,
-        name: tc.function.name,
-        content: JSON.stringify(result.ok ? result.result : { error: result.error }),
-      })
+
+      // Check if it's a skill call (function name starts with "skill_")
+      if (tc.function.name.startsWith("skill_")) {
+        const skillName = tc.function.name.replace("skill_", "")
+        const skill = autoTriggerSkills.find((s) => s.name === skillName)
+        if (!skill) {
+          allToolCalls.push({
+            name: tc.function.name,
+            args,
+            result: { error: `Skill não encontrada: ${skillName}` },
+            ok: false,
+          })
+          messages.push({
+            role: "tool",
+            tool_call_id: tc.id,
+            name: tc.function.name,
+            content: JSON.stringify({ error: `Skill não encontrada: ${skillName}` }),
+          })
+          continue
+        }
+        const skillCtx: SkillContext = { userId, userTimezone: "America/Cuiaba" }
+        const skillResult = await executeSkill(skill.builtin, args, skillCtx)
+        const resultContent = skillResult.ok
+          ? (skillResult.result || skillResult.prompt || "Skill executada.")
+          : { error: skillResult.error }
+        allToolCalls.push({
+          name: tc.function.name,
+          args,
+          result: skillResult.result ?? skillResult.error ?? skillResult.prompt,
+          ok: skillResult.ok,
+        })
+        messages.push({
+          role: "tool",
+          tool_call_id: tc.id,
+          name: tc.function.name,
+          content: typeof resultContent === "string" ? resultContent : JSON.stringify(resultContent),
+        })
+      } else {
+        // Regular tool call
+        const result = await executeTool(tc.function.name, args, ctx)
+        allToolCalls.push({
+          name: tc.function.name,
+          args,
+          result: result.result ?? result.error,
+          ok: result.ok,
+        })
+        messages.push({
+          role: "tool",
+          tool_call_id: tc.id,
+          name: tc.function.name,
+          content: JSON.stringify(result.ok ? result.result : { error: result.error }),
+        })
+      }
     }
   }
 
@@ -320,4 +477,61 @@ export async function runAgent(opts: {
     modelUsed: selectedModel,
     toolCalls: allToolCalls,
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Parse slash-command arguments from the user's message.
+ * Supports two formats:
+ * 1. key=value pairs: /translate text="hello world" to=pt
+ * 2. Positional (fills required params in order): /translate "hello world" pt
+ */
+function parseSkillArgs(input: string, skill: SkillSchema): Record<string, unknown> {
+  const args: Record<string, unknown> = {}
+  if (!input) return args
+
+  // Try key=value pattern first
+  const kvPattern = /(\w+)=("[^"]*"|'[^']*'|\S+)/g
+  let kvMatch
+  let hasKv = false
+  while ((kvMatch = kvPattern.exec(input)) !== null) {
+    const key = kvMatch[1]
+    let value = kvMatch[2]
+    // Strip quotes
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1)
+    }
+    args[key] = value
+    hasKv = true
+  }
+
+  if (hasKv) return args
+
+  // Positional: split by whitespace (respecting quotes) and fill required params in order
+  const tokens: string[] = []
+  const tokenPattern = /"[^"]*"|'[^']*'|\S+/g
+  let tMatch
+  while ((tMatch = tokenPattern.exec(input)) !== null) {
+    let token = tMatch[0]
+    if ((token.startsWith('"') && token.endsWith('"')) || (token.startsWith("'") && token.endsWith("'"))) {
+      token = token.slice(1, -1)
+    }
+    tokens.push(token)
+  }
+
+  const requiredParams = skill.parameters.filter((p) => p.required)
+  for (let i = 0; i < tokens.length && i < requiredParams.length; i++) {
+    const param = requiredParams[i]
+    let value: unknown = tokens[i]
+    if (param.type === "number") {
+      value = Number(tokens[i])
+      if (isNaN(value as number)) value = tokens[i]
+    }
+    args[param.key] = value
+  }
+
+  return args
 }

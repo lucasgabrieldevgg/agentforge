@@ -19,7 +19,7 @@ export type IntegrationDef = {
   service: string
   name: string
   description: string
-  category: "built-in" | "weather" | "communication" | "productivity" | "knowledge" | "automation"
+  category: "built-in" | "weather" | "information" | "utility" | "communication" | "productivity" | "knowledge" | "automation"
   icon: string // lucide icon name
   needsApiKey: boolean
   apiService?: string // which ApiKey.service to look up
@@ -42,83 +42,6 @@ export const INTEGRATIONS: IntegrationDef[] = [
         name: "get_current_datetime",
         description: "Retorna a data e hora atuais no fuso do usuário.",
         parameters: {},
-      },
-    ],
-  },
-  {
-    service: "memory",
-    name: "Memória Diária (Jarvis)",
-    description:
-      "Salva e recupera conversas em arquivos TXT diários. O agente lembra de dias anteriores. Gratuito.",
-    category: "built-in",
-    icon: "Brain",
-    needsApiKey: false,
-    isFree: true,
-    tools: [
-      {
-        name: "save_to_memory",
-        description:
-          "Salva um trecho de informação no arquivo TXT do dia atual. Use para lembrar fatos importantes que o usuário mencionou.",
-        parameters: {
-          content: {
-            type: "string",
-            description: "Texto a ser guardado na memória do dia.",
-            required: true,
-          },
-        },
-      },
-      {
-        name: "search_memory",
-        description:
-          "Busca nas memórias de dias anteriores por palavras-chave. Use quando o usuário perguntar algo sobre o passado.",
-        parameters: {
-          query: {
-            type: "string",
-            description: "Termo de busca.",
-            required: true,
-          },
-        },
-      },
-      {
-        name: "read_today_memory",
-        description: "Lê todo o conteúdo salvo na memória do dia atual.",
-        parameters: {},
-      },
-    ],
-  },
-  {
-    service: "openweather",
-    name: "Previsão do Tempo",
-    description:
-      "Consulta clima atual e previsão para qualquer cidade. Requer chave gratuita da OpenWeatherMap (1000 chamadas/dia).",
-    category: "weather",
-    icon: "CloudSun",
-    needsApiKey: true,
-    apiService: "openweather",
-    isFree: true,
-    setupUrl: "https://openweathermap.org/api",
-    tools: [
-      {
-        name: "get_weather",
-        description: "Retorna o clima atual de uma cidade.",
-        parameters: {
-          city: {
-            type: "string",
-            description: "Nome da cidade (ex: 'São Paulo', 'Rio de Janeiro').",
-            required: true,
-          },
-        },
-      },
-      {
-        name: "get_forecast",
-        description: "Retorna a previsão de 5 dias para uma cidade.",
-        parameters: {
-          city: {
-            type: "string",
-            description: "Nome da cidade.",
-            required: true,
-          },
-        },
       },
     ],
   },
@@ -157,7 +80,7 @@ export const INTEGRATIONS: IntegrationDef[] = [
           "Pesquisa aprofundada: busca em múltiplos idiomas, coleta resumos de artigos relacionados " +
           "e sintetiza um relatório completo. Use para perguntas complexas que exigem contexto de várias fontes. " +
           "Mais lento que search_wikipedia, mas muito mais completo. " +
-          "Níveis: 'quick' (1 idioma, sem relacionados), 'deep' (3 idiomas + 3 relacionados, padrão), " +
+          "Níveis: 'quick' (1 idioma, sem relacionados), 'high' (3 idiomas + 3 relacionados, padrão), " +
           "'max' (5 idiomas + 5 relacionados). O usuário pode configurar o padrão nas Settings.",
         parameters: {
           query: {
@@ -168,10 +91,10 @@ export const INTEGRATIONS: IntegrationDef[] = [
           level: {
             type: "string",
             description:
-              "Nível de profundidade: 'quick', 'deep' ou 'max'. " +
+              "Nível de profundidade: 'quick', 'high' ou 'max'. " +
               "Se omitido, usa o padrão do usuário (configurável em Settings).",
             required: false,
-            enum: ["quick", "deep", "max"],
+            enum: ["quick", "high", "max"],
           },
           langs: {
             type: "string",
@@ -201,6 +124,168 @@ export const INTEGRATIONS: IntegrationDef[] = [
             type: "string",
             description: "Expressão matemática (ex: '2 + 2 * 3', '(10 + 5) / 3').",
             required: true,
+          },
+        },
+      },
+    ],
+  },
+  {
+    service: "open-meteo",
+    name: "Previsão do Tempo (Open-Meteo)",
+    description:
+      "Consulta clima atual e previsão para qualquer cidade. Gratuito, sem chave de API.",
+    category: "weather",
+    icon: "CloudSun",
+    needsApiKey: false,
+    isFree: true,
+    tools: [
+      {
+        name: "get_weather",
+        description:
+          "Retorna o clima atual de uma cidade (temperatura, vento, chuva, umidade, UV). " +
+          "Útil quando o usuário pergunta sobre tempo/clima em qualquer lugar.",
+        parameters: {
+          city: {
+            type: "string",
+            description: "Nome da cidade (ex: 'São Paulo', 'Tokyo', 'New York').",
+            required: true,
+          },
+        },
+      },
+    ],
+  },
+  {
+    service: "frankfurter",
+    name: "Cotação de Moedas (Frankfurter)",
+    description:
+      "Cotação atual e conversão entre moedas (USD, EUR, BRL, etc). Gratuito, sem chave de API.",
+    category: "information",
+    icon: "DollarSign",
+    needsApiKey: false,
+    isFree: true,
+    tools: [
+      {
+        name: "get_exchange_rate",
+        description:
+          "Converte um valor de uma moeda para outra. Use quando o usuário perguntar sobre " +
+          "cotação de moedas ou conversão de valores. Dados do Banco Central Europeu.",
+        parameters: {
+          amount: {
+            type: "number",
+            description: "Valor a converter (ex: 100).",
+            required: true,
+          },
+          from: {
+            type: "string",
+            description: "Moeda de origem (código ISO 4217: USD, EUR, BRL, GBP, JPY, etc).",
+            required: true,
+          },
+          to: {
+            type: "string",
+            description: "Moeda de destino (código ISO 4217).",
+            required: true,
+          },
+        },
+      },
+    ],
+  },
+  {
+    service: "rest-countries",
+    name: "Dados de Países (REST Countries)",
+    description:
+      "Informações sobre qualquer país: capital, idiomas, moeda, bandeira, população, fronteiras. Gratuito, sem chave.",
+    category: "information",
+    icon: "Globe",
+    needsApiKey: false,
+    isFree: true,
+    tools: [
+      {
+        name: "get_country_info",
+        description:
+          "Retorna dados de um país: capital, idiomas, moeda, população, bandeira, região, fronteiras. " +
+          "Use quando o usuário perguntar sobre um país específico.",
+        parameters: {
+          country: {
+            type: "string",
+            description: "Nome do país (ex: 'Brazil', 'Japan', 'France') ou código ISO (BR, JP, FR).",
+            required: true,
+          },
+        },
+      },
+    ],
+  },
+  {
+    service: "unit-converter",
+    name: "Conversor de Unidades",
+    description:
+      "Converte unidades (comprimento, peso, temperatura, volume, velocidade, dados, tempo). Gratuito, sem API.",
+    category: "utility",
+    icon: "Ruler",
+    needsApiKey: false,
+    isFree: true,
+    tools: [
+      {
+        name: "convert_units",
+        description:
+          "Converte entre unidades. Suporta: comprimento (m, km, mi, ft, in), peso (kg, g, lb, oz), " +
+          "temperatura (C, F, K), volume (l, ml, gal, qt), velocidade (m/s, km/h, mph), " +
+          "dados (B, KB, MB, GB, TB), tempo (s, min, h, day). " +
+          "Use quando o usuário pedir conversão de unidades.",
+        parameters: {
+          value: {
+            type: "number",
+            description: "Valor a converter (ex: 100).",
+            required: true,
+          },
+          from: {
+            type: "string",
+            description: "Unidade de origem (ex: 'F', 'mi', 'GB').",
+            required: true,
+          },
+          to: {
+            type: "string",
+            description: "Unidade de destino (ex: 'C', 'km', 'MB').",
+            required: true,
+          },
+        },
+      },
+    ],
+  },
+  {
+    service: "password-gen",
+    name: "Gerador de Senhas",
+    description:
+      "Gera senhas seguras aleatórias com critérios personalizáveis. Gratuito, sem API.",
+    category: "utility",
+    icon: "KeyRound",
+    needsApiKey: false,
+    isFree: true,
+    tools: [
+      {
+        name: "generate_password",
+        description:
+          "Gera uma senha aleatória segura. Use quando o usuário pedir uma senha. " +
+          "Por padrão gera senha de 16 chars com letras, números e símbolos.",
+        parameters: {
+          length: {
+            type: "number",
+            description: "Tamanho da senha (padrão: 16, máx: 128).",
+            required: false,
+          },
+          include_symbols: {
+            type: "boolean",
+            description: "Incluir símbolos (!@#$%&*). Padrão: true.",
+            required: false,
+          },
+          include_numbers: {
+            type: "boolean",
+            description: "Incluir números. Padrão: true.",
+            required: false,
+          },
+          count: {
+            type: "number",
+            description: "Quantas senhas gerar (padrão: 1, máx: 20).",
+            required: false,
           },
         },
       },

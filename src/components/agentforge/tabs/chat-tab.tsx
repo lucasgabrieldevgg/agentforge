@@ -51,6 +51,13 @@ type Msg = {
   ts: number
 }
 
+const SUGGESTIONS = [
+  "Que horas são?",
+  "Quanto é 15% de 230?",
+  "Quem foi Alan Turing?",
+  "Traduza 'bom dia' para 5 idiomas",
+]
+
 export function ChatTab() {
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState("")
@@ -58,7 +65,7 @@ export function ChatTab() {
   const [voiceMode, setVoiceMode] = useState(false)
   const [ttsEnabled, setTtsEnabled] = useState(true)
   const [thinkingEnabled, setThinkingEnabled] = useState(false)
-  const [deepResearchLevel, setDeepResearchLevel] = useState<"quick" | "deep" | "max">("deep")
+  const [deepResearchLevel, setDeepResearchLevel] = useState<"quick" | "high" | "max">("high")
   const [preferredModel, setPreferredModel] = useState<string>("openai/gpt-oss-20b:free")
   const [models, setModels] = useState<Array<{
     id: string
@@ -106,7 +113,7 @@ export function ChatTab() {
       .catch(() => {})
   }, [])
 
-  const changeDeepResearchLevel = async (level: "quick" | "deep" | "max") => {
+  const changeDeepResearchLevel = async (level: "quick" | "high" | "max") => {
     setDeepResearchLevel(level)
     try {
       await fetch("/api/settings", {
@@ -114,12 +121,12 @@ export function ChatTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ deepResearchLevel: level }),
       })
-      const names = { quick: "Quick", deep: "Deep", max: "Max" }
+      const names = { quick: "Quick", high: "High", max: "Max" }
       toast({
         title: "Deep Research: " + names[level],
         description: {
           quick: "Rápido: 1 idioma, sem relacionados.",
-          deep: "Profundo: 3 idiomas + 3 relacionados.",
+          high: "Profundo: 3 idiomas + 3 relacionados.",
           max: "Máximo: 5 idiomas + 5 relacionados.",
         }[level],
       })
@@ -303,31 +310,30 @@ export function ChatTab() {
       <ScrollArea className="flex-1" ref={scrollRef as any}>
         <div className="max-w-3xl mx-auto p-4 space-y-4">
           {messages.length === 0 && (
-            <div className="text-center py-16 space-y-4">
+            <div className="text-center py-12 space-y-4">
               <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto glow-primary">
                 <Sparkles className="w-8 h-8 text-primary" />
               </div>
               <h3 className="text-xl font-bold">Olá! Sou seu agente.</h3>
               <p className="text-muted-foreground max-w-md mx-auto">
-                Pode me pedir o clima, fazer contas, buscar na Wikipedia, ou apenas
-                conversar. Posso salvar suas preferências na memória também.
+                Pode me fazer perguntas, pedir cálculos, buscar conhecimento, ou
+                apenas conversar.
               </p>
-              <div className="flex flex-wrap gap-2 justify-center pt-2">
-                {[
-                  "Que horas são?",
-                  "Como está o clima em São Paulo?",
-                  "Quanto é 15% de 230?",
-                  "Quem foi Alan Turing?",
-                ].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => sendMessage(s)}
-                    className="px-3 py-1.5 rounded-md border border-border/60 hover:border-primary/40 text-sm font-mono transition-colors"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
+            </div>
+          )}
+
+          {/* Always-visible suggestions (don't disappear when typing) */}
+          {messages.length === 0 && (
+            <div className="flex flex-wrap gap-2 justify-center pt-2 pb-4">
+              {SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => sendMessage(s)}
+                  className="px-3 py-1.5 rounded-md border border-border/60 hover:border-primary/40 text-sm font-mono transition-colors"
+                >
+                  {s}
+                </button>
+              ))}
             </div>
           )}
 
@@ -441,7 +447,7 @@ export function ChatTab() {
                 <Telescope className="w-3 h-3 text-primary" />
                 <Select
                   value={deepResearchLevel}
-                  onValueChange={(v) => changeDeepResearchLevel(v as "quick" | "deep" | "max")}
+                  onValueChange={(v) => changeDeepResearchLevel(v as "quick" | "high" | "max")}
                 >
                   <SelectTrigger className="h-6 w-[110px] text-xs font-mono border-0 bg-transparent p-0 focus:ring-0">
                     <SelectValue />
@@ -453,10 +459,10 @@ export function ChatTab() {
                         <span>Quick</span>
                       </div>
                     </SelectItem>
-                    <SelectItem value="deep" className="text-xs font-mono">
+                    <SelectItem value="high" className="text-xs font-mono">
                       <div className="flex items-center gap-2">
                         <Layers className="w-3 h-3 text-primary" />
-                        <span>Deep</span>
+                        <span>High</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="max" className="text-xs font-mono">

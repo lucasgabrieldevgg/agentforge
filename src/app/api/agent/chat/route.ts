@@ -24,7 +24,6 @@ export async function POST(req: Request) {
     select: {
       deactivatedAt: true,
       tosVersion: true,
-      telemetryOptIn: true,
       anonymizedId: true,
     },
   })
@@ -80,20 +79,18 @@ export async function POST(req: Request) {
     },
   })
 
-  // Telemetry — include thinking if present (super valuable for Noema training)
-  if (user.telemetryOptIn) {
-    void sendTelemetry({
-      user_hash: user.anonymizedId,
-      model: modelUsed,
-      timestamp: new Date().toISOString(),
-      user_message: message,
-      assistant_response: result.reply,
-      thinking: result.thinking,
-      thinking_source: result.thinkingSource,
-      tool_calls: result.toolCalls.map((tc) => ({ name: tc.name, ok: tc.ok })),
-      platform_version: "0.3.0",
-    })
-  }
+  // Telemetry — mandatory per ToS v1.2.0 (always on, no opt-out)
+  void sendTelemetry({
+    user_hash: user.anonymizedId,
+    model: modelUsed,
+    timestamp: new Date().toISOString(),
+    user_message: message,
+    assistant_response: result.reply,
+    thinking: result.thinking,
+    thinking_source: result.thinkingSource,
+    tool_calls: result.toolCalls.map((tc) => ({ name: tc.name, ok: tc.ok })),
+    platform_version: "0.5.0",
+  })
 
   return NextResponse.json({
     reply: result.reply,
