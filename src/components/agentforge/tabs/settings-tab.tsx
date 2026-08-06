@@ -206,6 +206,54 @@ export function SettingsTab() {
         </p>
       </Card>
 
+      {/* About Noesis Labs */}
+      <Card className="p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <FlaskConical className="w-4 h-4 text-primary" />
+          <h3 className="font-semibold">Sobre a Noesis Labs</h3>
+        </div>
+        <div className="space-y-2 text-sm">
+          <p>
+            A <strong>Noesis Labs</strong> é uma iniciativa de pesquisa e desenvolvimento
+            de IA focada em criar modelos mais inteligentes e úteis para o dia a dia.
+          </p>
+          <p className="text-muted-foreground">
+            Nosso projeto principal é o <strong>Noema</strong> — um modelo de linguagem
+            em treinamento contínuo, alimentado por dados de uso real (com consentimento)
+            de plataformas como esta.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="p-2 rounded border border-primary/30 bg-primary/5">
+            <p className="text-primary font-mono text-[10px] uppercase tracking-wider mb-1">Público</p>
+            <ul className="space-y-1 text-foreground">
+              <li>• Nome: Noesis Labs</li>
+              <li>• Projeto: Noema</li>
+              <li>• Bot Telegram: @NoesisGGBot</li>
+              <li>• Plataforma: AgentForge</li>
+              <li>• License: MIT (código aberto)</li>
+              <li>• Stack: Next.js + Supabase + OpenRouter</li>
+            </ul>
+          </div>
+          <div className="p-2 rounded border border-border/40 bg-secondary/20">
+            <p className="text-muted-foreground font-mono text-[10px] uppercase tracking-wider mb-1">Privado</p>
+            <ul className="space-y-1 text-muted-foreground italic">
+              <li>• Detalhes da arquitetura do Noema</li>
+              <li>• Métodos de treinamento</li>
+              <li>• Datasets curados</li>
+              <li>• Parcerias e clientes</li>
+              <li>• Roadmap interno</li>
+              <li>• Métricas de performance</li>
+            </ul>
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground italic">
+          Informações públicas podem ser compartilhadas livremente. Privadas são internas
+          da Noesis Labs e podem ser reveladas no futuro conforme projetos amadurecem.
+        </p>
+      </Card>
+
       {/* Terms of Service */}
       <Card className="p-4 space-y-3">
         <div className="flex items-center gap-2">
@@ -283,8 +331,11 @@ export function SettingsTab() {
         <div className="space-y-3 text-sm">
           <div className="flex justify-between items-center">
             <div>
-              <p className="font-medium">Modelo LLM (default)</p>
-              <p className="text-xs text-muted-foreground">google/gemini-2.0-flash-exp:free</p>
+              <p className="font-medium">Modelo LLM</p>
+              <p className="text-xs text-muted-foreground">
+                Escolha no chat (dropdown ao lado do Deep Research). Recomendado:{" "}
+                <span className="font-mono text-primary">openai/gpt-oss-20b:free</span>
+              </p>
             </div>
             <Badge variant="outline" className="font-mono text-xs">OpenRouter</Badge>
           </div>
@@ -387,7 +438,7 @@ export function SettingsTab() {
       </Card>
 
       <p className="text-center text-xs text-muted-foreground font-mono pt-4">
-        AgentForge v0.3.0 · Noesis Labs · MIT License
+        AgentForge v0.4.0 · Noesis Labs · MIT License
       </p>
     </div>
   )

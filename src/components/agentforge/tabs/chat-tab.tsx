@@ -32,6 +32,7 @@ import {
   Zap,
   Layers,
   Crown,
+  Cpu,
 } from "lucide-react"
 
 type Msg = {
@@ -58,6 +59,15 @@ export function ChatTab() {
   const [ttsEnabled, setTtsEnabled] = useState(true)
   const [thinkingEnabled, setThinkingEnabled] = useState(false)
   const [deepResearchLevel, setDeepResearchLevel] = useState<"quick" | "deep" | "max">("deep")
+  const [preferredModel, setPreferredModel] = useState<string>("openai/gpt-oss-20b:free")
+  const [models, setModels] = useState<Array<{
+    id: string
+    name: string
+    description: string
+    contextLength: number
+    hasNativeThinking: boolean
+    recommended?: boolean
+  }>>([])
   const [hydrated, setHydrated] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
@@ -85,11 +95,13 @@ export function ChatTab() {
         }
       })
       .catch(() => {})
-    // Load deep research level preference
+    // Load deep research level + preferred model
     fetch("/api/settings")
       .then((r) => r.json())
       .then((d) => {
         if (d.deepResearchLevel) setDeepResearchLevel(d.deepResearchLevel)
+        if (d.preferredModel) setPreferredModel(d.preferredModel)
+        if (d.models) setModels(d.models)
       })
       .catch(() => {})
   }, [])
@@ -110,6 +122,30 @@ export function ChatTab() {
           deep: "Profundo: 3 idiomas + 3 relacionados.",
           max: "Máximo: 5 idiomas + 5 relacionados.",
         }[level],
+      })
+    } catch (e) {
+      toast({
+        title: "Erro ao salvar",
+        description: (e as Error).message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const changeModel = async (modelId: string) => {
+    setPreferredModel(modelId)
+    try {
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferredModel: modelId }),
+      })
+      const model = models.find((m) => m.id === modelId)
+      toast({
+        title: "Modelo: " + (model?.name || modelId),
+        description: model
+          ? `${model.hasNativeThinking ? "🧠 Tem thinking nativo. " : ""}Contexto: ${Math.round(model.contextLength / 1000)}K tokens.`
+          : "Modelo customizado.",
       })
     } catch (e) {
       toast({
@@ -155,6 +191,7 @@ export function ChatTab() {
             message: trimmed,
             history,
             thinking: thinkingEnabled,
+            model: preferredModel,
           }),
         })
         const data = await res.json()
@@ -428,6 +465,50 @@ export function ChatTab() {
                         <span>Max</span>
                       </div>
                     </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-1 px-2 py-1 rounded-md border border-border/40 bg-secondary/40">
+                <Cpu className="w-3 h-3 text-primary shrink-0" />
+                <Select
+                  value={preferredModel}
+                  onValueChange={changeModel}
+                >
+                  <SelectTrigger className="h-6 w-[160px] text-xs font-mono border-0 bg-transparent p-0 focus:ring-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {models.length === 0 ? (
+                      <SelectItem value={preferredModel} className="text-xs font-mono">
+                        {preferredModel}
+                      </SelectItem>
+                    ) : (
+                      models.map((m) => (
+                        <SelectItem
+                          key={m.id}
+                          value={m.id}
+                          className="text-xs font-mono py-2"
+                        >
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1.5">
+                              {m.hasNativeThinking && (
+                                <Brain className="w-3 h-3 text-primary shrink-0" />
+                              )}
+                              {m.recommended && (
+                                <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
+                              )}
+                              <span className="font-semibold">{m.name}</span>
+                              <span className="text-[9px] text-muted-foreground">
+                                {Math.round(m.contextLength / 1000)}K
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">
+                              {m.description.slice(0, 80)}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>

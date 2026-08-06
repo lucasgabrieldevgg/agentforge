@@ -22,6 +22,8 @@ model User {
   tosVersion        String?
   // Deep research level: "quick" | "deep" | "max"
   deepResearchLevel String    @default("deep")
+  // Preferred OpenRouter model (default: openai/gpt-oss-20b:free)
+  preferredModel    String    @default("openai/gpt-oss-20b:free")
   lastActiveAt      DateTime? @default(now())
   deactivatedAt     DateTime?
   createdAt         DateTime  @default(now())
