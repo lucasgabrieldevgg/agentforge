@@ -152,10 +152,10 @@ export async function runAgent(opts: {
     }
   }
 
-  // Load user's deep research level preference
+  // Load user's deep research level + preferred model
   const userRow = await db.user.findUnique({
     where: { id: userId },
-    select: { deepResearchLevel: true },
+    select: { deepResearchLevel: true, preferredModel: true },
   })
   const deepResearchLevel = (userRow?.deepResearchLevel || "deep") as
     | "quick"
@@ -174,7 +174,11 @@ export async function runAgent(opts: {
     },
   }
 
-  const selectedModel = model || "google/gemini-2.0-flash-exp:free"
+  // Determine which model to use: explicit request > user preference > default
+  const selectedModel =
+    model ||
+    userRow?.preferredModel ||
+    "openai/gpt-oss-20b:free"
   const nativeThinking = modelHasNativeThinking(selectedModel)
 
   // Decide thinking strategy:
