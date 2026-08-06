@@ -21,8 +21,8 @@ model User {
   telemetryOptIn    Boolean   @default(true)
   tosAcceptedAt     DateTime?
   tosVersion        String?
-  // Deep research level: "quick" | "deep" | "max"
-  deepResearchLevel String    @default("deep")
+  // Deep research level: "quick" | "high" | "max"
+  deepResearchLevel String    @default("high")
   // Preferred OpenRouter model (default: openai/gpt-oss-20b:free)
   preferredModel    String    @default("openai/gpt-oss-20b:free")
   lastActiveAt      DateTime? @default(now())

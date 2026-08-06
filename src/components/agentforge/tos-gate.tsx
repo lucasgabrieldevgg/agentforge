@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Bot, Loader2, ShieldCheck, FileText, AlertTriangle } from "lucide-react"
+import { Bot, Loader2, ShieldCheck, FileText } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAppStore } from "@/stores/app-store"
 import ReactMarkdown from "react-markdown"
@@ -18,7 +18,6 @@ type ToSData = {
   acceptedAt: string | null
   acceptedVersion: string | null
   needsAcceptance: boolean
-  telemetryOptIn: boolean
 }
 
 export function ToSGate({ onAccepted }: { onAccepted: () => void }) {
@@ -26,17 +25,13 @@ export function ToSGate({ onAccepted }: { onAccepted: () => void }) {
   const [loading, setLoading] = useState(true)
   const [accepting, setAccepting] = useState(false)
   const [checked, setChecked] = useState(false)
-  const [telemetryOptIn, setTelemetryOptIn] = useState(true)
   const { toast } = useToast()
   const { setView } = useAppStore()
 
   useEffect(() => {
     fetch("/api/tos")
       .then((r) => r.json())
-      .then((d) => {
-        setData(d)
-        setTelemetryOptIn(d.telemetryOptIn ?? true)
-      })
+      .then((d) => setData(d))
       .finally(() => setLoading(false))
   }, [])
 
@@ -54,7 +49,7 @@ export function ToSGate({ onAccepted }: { onAccepted: () => void }) {
       const res = await fetch("/api/tos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accept: true, telemetryOptIn }),
+        body: JSON.stringify({ accept: true }),
       })
       if (!res.ok) throw new Error("Falha ao aceitar")
       toast({ title: "Termos aceitos!", description: "Bem-vindo ao AgentForge." })
@@ -107,9 +102,9 @@ export function ToSGate({ onAccepted }: { onAccepted: () => void }) {
               <p className="font-semibold">Resumo rápido</p>
               <ul className="text-muted-foreground list-disc list-inside space-y-0.5 text-xs">
                 <li>Você traz suas próprias chaves de API (OpenRouter, etc).</li>
-                <li>Coletamos conversas <strong>anonimamente</strong> pra treinar o Noema (Noesis Labs).</li>
-                <li>Sem login por 30 dias → conta desativada. 90 dias → deletada.</li>
-                <li>Você pode desativar a telemetria nas Settings quando quiser.</li>
+                <li>Coleta anônima de conversas é <strong>obrigatória</strong> para usar a plataforma.</li>
+                <li>Sem login por 14 dias → conta desativada. 30 dias → deletada.</li>
+                <li>Sem PII (sem email, nome, senhas, chaves de API).</li>
               </ul>
             </div>
           </div>
@@ -136,37 +131,14 @@ export function ToSGate({ onAccepted }: { onAccepted: () => void }) {
             />
             <div className="text-sm">
               <p className="font-medium">
-                Eu li e aceito os Termos de Uso (versão {data.version}).
+                Eu li e aceito os Termos de Uso (versão {data.version}), incluindo a
+                coleta anônima de dados.
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Você precisará aceitar novamente se os termos mudarem.
               </p>
             </div>
           </label>
-
-          <label className="flex items-start gap-3 cursor-pointer">
-            <Checkbox
-              checked={telemetryOptIn}
-              onCheckedChange={(v) => setTelemetryOptIn(v === true)}
-              className="mt-1"
-            />
-            <div className="text-sm">
-              <p className="font-medium">
-                Permito coleta anônima das minhas conversas para pesquisa da Noesis Labs.
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Recomendado — ajuda a melhorar o Noema. Sem PII. Pode ser desativado depois.
-              </p>
-            </div>
-          </label>
-
-          <div className="flex items-center gap-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs">
-            <AlertTriangle className="w-3 h-3 shrink-0" />
-            <span>
-              Se recusar a telemetria, o agente ainda funciona, mas seus dados não ajudam a
-              pesquisa.
-            </span>
-          </div>
 
           <div className="flex flex-col sm:flex-row gap-2 pt-2">
             <Button

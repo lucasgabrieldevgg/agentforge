@@ -44,7 +44,13 @@ export const authOptions: NextAuthOptions = {
           await db.integration.createMany({
             data: [
               { userId: user.id, service: "time", enabled: true, config: "{}" },
-              { userId: user.id, service: "memory", enabled: true, config: "{}" },
+              { userId: user.id, service: "wikipedia", enabled: true, config: "{}" },
+              { userId: user.id, service: "calculator", enabled: true, config: "{}" },
+              { userId: user.id, service: "open-meteo", enabled: true, config: "{}" },
+              { userId: user.id, service: "frankfurter", enabled: true, config: "{}" },
+              { userId: user.id, service: "rest-countries", enabled: true, config: "{}" },
+              { userId: user.id, service: "unit-converter", enabled: true, config: "{}" },
+              { userId: user.id, service: "password-gen", enabled: true, config: "{}" },
             ],
           })
           // If came from waitlist, mark as accepted

@@ -6,6 +6,7 @@ export type View = "landing" | "auth" | "dashboard" | "waitlist"
 
 export type DashboardTab =
   | "chat"
+  | "skills"
   | "integrations"
   | "keys"
   | "memory"

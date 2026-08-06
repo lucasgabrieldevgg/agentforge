@@ -6,11 +6,11 @@ server.log
 download
 examples
 mini-services
-skills
 tests
 .zscripts
 .vercel
 tool-results
+/skills
 *.md
 .env
 .env.local

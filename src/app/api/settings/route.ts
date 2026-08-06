@@ -5,7 +5,7 @@ import { db } from "@/lib/db"
 import { updateLastActive } from "@/lib/activity"
 import { RECOMMENDED_MODELS, DEFAULT_MODEL } from "@/lib/models"
 
-const VALID_LEVELS = ["quick", "deep", "max"] as const
+const VALID_LEVELS = ["quick", "high", "max"] as const
 type DeepResearchLevel = (typeof VALID_LEVELS)[number]
 
 export async function GET() {
@@ -18,7 +18,7 @@ export async function GET() {
     select: { deepResearchLevel: true, preferredModel: true },
   })
   return NextResponse.json({
-    deepResearchLevel: user?.deepResearchLevel || "deep",
+    deepResearchLevel: user?.deepResearchLevel || "high",
     preferredModel: user?.preferredModel || DEFAULT_MODEL,
     models: RECOMMENDED_MODELS,
     levels: [
@@ -29,8 +29,8 @@ export async function GET() {
         icon: "Zap",
       },
       {
-        id: "deep",
-        name: "Deep",
+        id: "high",
+        name: "High",
         description: "3 idiomas em paralelo (pt, en, es) + 3 relacionados. ~3s. (padrão)",
         icon: "Layers",
       },
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
   if (deepResearchLevel !== undefined) {
     if (!VALID_LEVELS.includes(deepResearchLevel as DeepResearchLevel)) {
       return NextResponse.json(
-        { error: "deepResearchLevel inválido. Use: quick, deep ou max." },
+        { error: "deepResearchLevel inválido. Use: quick, high ou max." },
         { status: 400 }
       )
     }

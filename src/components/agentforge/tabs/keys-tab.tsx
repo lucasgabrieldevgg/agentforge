@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { useAppStore } from "@/stores/app-store"
+import { OpenRouterTutorial } from "@/components/agentforge/openrouter-tutorial"
 import {
   KeyRound,
   Trash2,
@@ -29,14 +30,6 @@ const SERVICES = [
     placeholder: "sk-or-v1-...",
     free: true,
     required: true,
-  },
-  {
-    service: "openweather",
-    name: "OpenWeatherMap",
-    description: "Previsão do tempo. 1000 chamadas/dia grátis.",
-    url: "https://openweathermap.org/api",
-    placeholder: "sua-chave-de-32-caracteres",
-    free: true,
   },
   {
     service: "gmail",
@@ -278,6 +271,8 @@ export function KeysTab() {
           })}
         </div>
       )}
+
+      <OpenRouterTutorial />
     </div>
   )
 }
