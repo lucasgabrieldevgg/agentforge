@@ -22,7 +22,8 @@ type HistoryMsg = {
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
-export const maxDuration = 60
+export const maxDuration = 300
+export const fetchCache = "force-no-store"
 
 export async function POST(req: Request) {
   const userId = await getDemoUserId()
@@ -68,13 +69,31 @@ export async function POST(req: Request) {
   })
 
   const encoder = new TextEncoder()
+  let isClosed = false
+
   const stream = new ReadableStream({
     async start(controller) {
       const send = (event: string, data: unknown) => {
-        controller.enqueue(
-          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
-        )
+        if (isClosed) return
+        try {
+          controller.enqueue(
+            encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+          )
+        } catch {
+          // controller already closed
+        }
       }
+
+      // Heartbeat: send a comment every 15 seconds to keep the connection alive
+      // This prevents Vercel/proxies from closing idle SSE connections
+      const heartbeat = setInterval(() => {
+        if (isClosed) return
+        try {
+          controller.enqueue(encoder.encode(`: heartbeat\n\n`))
+        } catch {
+          // ignore
+        }
+      }, 15000)
 
       try {
         const result = await runAgentStream({
@@ -107,7 +126,7 @@ export async function POST(req: Request) {
           thinking: result.thinking,
           thinking_source: result.thinkingSource,
           tool_calls: result.toolCalls.map((tc) => ({ name: tc.name, ok: tc.ok })),
-          platform_version: "0.7.0",
+          platform_version: "0.9.0",
         })
 
         send("done", {
@@ -118,10 +137,27 @@ export async function POST(req: Request) {
           toolCalls: result.toolCalls,
         })
       } catch (e) {
-        send("error", { message: (e as Error).message })
+        const errMsg = (e as Error).message
+        // If it's a timeout or abort error, send a special message
+        if (errMsg.includes("aborted") || errMsg.includes("timeout") || errMsg.includes("Timeout")) {
+          send("error", {
+            message: "A resposta demorou muito e foi interrompida. Tente novamente, ou use um thinking level menor (Quick).",
+          })
+        } else {
+          send("error", { message: errMsg })
+        }
       } finally {
-        controller.close()
+        clearInterval(heartbeat)
+        isClosed = true
+        try {
+          controller.close()
+        } catch {
+          // already closed
+        }
       }
+    },
+    cancel() {
+      isClosed = true
     },
   })
 

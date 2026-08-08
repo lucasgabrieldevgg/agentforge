@@ -91,9 +91,27 @@ Você é autônomo: decide sozinho quando usar ferramentas, skills e pesquisas. 
 - USE ferramentas proativamente quando precisar de dados externos. Não invente números, datas ou fatos.
 - Para perguntas complexas, use deep_research. Para perguntas simples, use search_wikipedia.
 - Se uma ferramenta falhar, explique e sugira alternativa.
-- Quando gerar código, use blocos markdown com a linguagem correta (ex: \`\`\`python).
 - Seja conciso nas respostas diretas, mas completo em explicações.
-- Você pode encadear múltiplas chamadas de ferramentas se necessário.`
+- Você pode encadear múltiplas chamadas de ferramentas se necessário.
+
+## Geração de código — MUITO IMPORTANTE
+Quando o usuário pedir código (site, script, função, etc):
+
+1. **SEMPRE gere o código COMPLETO**. Nunca corte no meio. Nunca use "..." ou "resto do código". O código deve funcionar quando copiado.
+
+2. **Estruture em arquivos separados quando fizer sentido**. Exemplo para um site:
+   - Use UM bloco \`\`\`html para o HTML (com <style> e <script> embutidos se for simples)
+   - Se o projeto for complexo, separe em múltiplos blocos: \`\`\`html, \`\`\`css, \`\`\`javascript
+
+3. **Para sites HTML**: coloque TODO o CSS dentro de <style> no <head> e TODO o JavaScript dentro de <script> antes de </body>. NUNCA deixe o código incompleto.
+
+4. **Não explique demais antes do código**. Vá direto ao código. Explicações curtas depois se necessário.
+
+5. **Teste mentalmente** se o código está completo antes de enviar. Verifique se todas as tags fecham, se todas as funções estão implementadas, se não há nada truncado.
+
+6. **Prefira qualidade sobre quantidade**. Um site simples mas completo e funcional é melhor que um complexo mas incompleto.
+
+Lembre-se: o código que você gerar será extraído automaticamente e o usuário poderá ver o preview e baixar. Por isso, gere código que FUNCIONE.`
 
 function schemaToOpenRouter(schema: ToolSchema) {
   const properties: Record<string, unknown> = {}
@@ -429,6 +447,7 @@ async function streamLLM(
     tools: tools.length ? tools : undefined,
     tool_choice: tools.length ? "auto" : undefined,
     temperature: 0.7,
+    max_tokens: 16000,
   }
   // Add reasoning effort for models that support it (OpenRouter extension)
   if (reasoningEffort) {

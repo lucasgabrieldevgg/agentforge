@@ -253,6 +253,8 @@ export function ChatTab() {
           }
         }
 
+        let receivedDone = false
+
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
@@ -290,6 +292,7 @@ export function ChatTab() {
                     ok: data.ok,
                   })
                 } else if (currentEvent === "done") {
+                  receivedDone = true
                   fullReply = data.fullReply || fullReply
                   thinking = data.thinking || thinking
                   thinkingSource = data.thinkingSource || "none"
@@ -313,7 +316,21 @@ export function ChatTab() {
           }
         }
 
-        if (ttsEnabled && ttsSupported && fullReply) {
+        // If stream ended without "done" event, the response was likely truncated
+        // by a timeout. Mark as done with what we have + warning.
+        if (!receivedDone && fullReply) {
+          persistAiMsg({
+            content: fullReply + "\n\n⚠️ **Aviso:** A resposta foi interrompida por timeout. O código pode estar incompleto. Tente novamente com thinking level Quick, ou peça algo mais simples.",
+            streaming: false,
+          })
+        } else if (!receivedDone) {
+          persistAiMsg({
+            content: "⚠️ A resposta foi interrompida por timeout. Tente novamente com thinking level Quick, ou simplifique seu pedido.",
+            streaming: false,
+          })
+        }
+
+        if (ttsEnabled && ttsSupported && fullReply && receivedDone) {
           speak(fullReply)
         }
       } catch (e) {
