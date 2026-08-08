@@ -3,6 +3,7 @@
 import { create } from "zustand"
 
 export type DashboardTab =
+  | "projects"
   | "chat"
   | "skills"
   | "integrations"
@@ -15,6 +16,6 @@ type AppState = {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  activeTab: "chat",
+  activeTab: "projects",
   setActiveTab: (activeTab) => set({ activeTab }),
 }))
