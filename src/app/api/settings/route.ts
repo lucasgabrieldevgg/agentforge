@@ -1,20 +1,16 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { db } from "@/lib/db"
-import { updateLastActive } from "@/lib/activity"
 import { RECOMMENDED_MODELS, DEFAULT_MODEL } from "@/lib/models"
+import { getDemoUserId } from "@/lib/demo-user"
+import { updateLastActive } from "@/lib/activity"
 
 const VALID_LEVELS = ["quick", "high", "max"] as const
 type DeepResearchLevel = (typeof VALID_LEVELS)[number]
 
 export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-  }
+  const userId = await getDemoUserId()
   const user = await db.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: userId },
     select: { deepResearchLevel: true, preferredModel: true },
   })
   return NextResponse.json({
@@ -22,33 +18,15 @@ export async function GET() {
     preferredModel: user?.preferredModel || DEFAULT_MODEL,
     models: RECOMMENDED_MODELS,
     levels: [
-      {
-        id: "quick",
-        name: "Quick",
-        description: "1 idioma (pt), sem artigos relacionados. ~1s.",
-        icon: "Zap",
-      },
-      {
-        id: "high",
-        name: "High",
-        description: "3 idiomas em paralelo (pt, en, es) + 3 relacionados. ~3s. (padrão)",
-        icon: "Layers",
-      },
-      {
-        id: "max",
-        name: "Max",
-        description: "5 idiomas em paralelo + 5 relacionados. ~5s. Mais completo.",
-        icon: "Crown",
-      },
+      { id: "quick", name: "Quick", description: "1 idioma (pt), sem artigos relacionados. ~1s.", icon: "Zap" },
+      { id: "high", name: "High", description: "3 idiomas em paralelo (pt, en, es) + 3 relacionados. ~3s. (padrão)", icon: "Layers" },
+      { id: "max", name: "Max", description: "5 idiomas em paralelo + 5 relacionados. ~5s. Mais completo.", icon: "Crown" },
     ],
   })
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-  }
+  const userId = await getDemoUserId()
   const body = await req.json().catch(() => ({}))
   const { deepResearchLevel, preferredModel } = body as {
     deepResearchLevel?: string
@@ -68,12 +46,8 @@ export async function POST(req: Request) {
   }
 
   if (preferredModel !== undefined) {
-    // Allow any string — user might want to try a model not in our catalog
     if (typeof preferredModel !== "string" || preferredModel.length > 200) {
-      return NextResponse.json(
-        { error: "preferredModel inválido." },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "preferredModel inválido." }, { status: 400 })
     }
     data.preferredModel = preferredModel
   }
@@ -83,9 +57,9 @@ export async function POST(req: Request) {
   }
 
   await db.user.update({
-    where: { id: session.user.id },
+    where: { id: userId },
     data,
   })
-  void updateLastActive(session.user.id)
+  void updateLastActive(userId)
   return NextResponse.json({ ok: true, ...data })
 }

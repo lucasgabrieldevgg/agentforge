@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { db } from "@/lib/db"
+import { getDemoUserId } from "@/lib/demo-user"
 
 export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-  }
-  const userId = session.user.id
+  const userId = await getDemoUserId()
   const messages = await db.conversation.findMany({
     where: { userId },
     orderBy: { createdAt: "asc" },
@@ -18,11 +13,7 @@ export async function GET() {
 }
 
 export async function DELETE() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-  }
-  const userId = session.user.id
+  const userId = await getDemoUserId()
   await db.conversation.deleteMany({ where: { userId } })
   return NextResponse.json({ ok: true })
 }

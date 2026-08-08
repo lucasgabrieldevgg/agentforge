@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { db } from "@/lib/db"
 import { INTEGRATIONS } from "@/lib/tools/registry"
+import { getDemoUserId } from "@/lib/demo-user"
 
 export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-  }
-  const userId = session.user.id
+  const userId = await getDemoUserId()
   const userIntegrations = await db.integration.findMany({ where: { userId } })
   const userMap = Object.fromEntries(userIntegrations.map((i) => [i.service, i]))
 
@@ -23,10 +18,9 @@ export async function GET() {
     isFree: def.isFree,
     setupUrl: def.setupUrl,
     enabled: userMap[def.service]?.enabled ?? false,
-    hasApiKey: false as boolean, // fill below
+    hasApiKey: false as boolean,
   }))
 
-  // check api keys
   const apiKeys = await db.apiKey.findMany({ where: { userId } })
   const keySet = new Set(apiKeys.map((k) => k.service))
   for (const item of catalog) {
@@ -40,11 +34,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-  }
-  const userId = session.user.id
+  const userId = await getDemoUserId()
   const body = await req.json().catch(() => ({}))
   const { service, enabled } = body as { service: string; enabled: boolean }
   if (!service) return NextResponse.json({ error: "service obrigatório" }, { status: 400 })
