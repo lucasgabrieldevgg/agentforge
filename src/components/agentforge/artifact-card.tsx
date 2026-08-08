@@ -42,6 +42,14 @@ export function extractArtifacts(content: string): Artifact[] {
   return artifacts
 }
 
+// Strip code blocks from content, leaving only the narration text
+export function stripCodeBlocks(content: string): string {
+  return content
+    .replace(/```(\w+)?\n[\s\S]*?```/g, "")
+    .replace(/\n{3,}/g, "\n\n") // clean up extra newlines
+    .trim()
+}
+
 function guessFilename(language: string, idx: number): string {
   const extensions: Record<string, string> = {
     javascript: "js", js: "js", typescript: "ts", ts: "ts",

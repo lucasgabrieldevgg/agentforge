@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useSpeechRecognition, useSpeechSynthesis } from "@/hooks/use-speech"
 import { useProjectStore } from "@/stores/project-store"
 import { useAppStore } from "@/stores/app-store"
-import { ArtifactCard, extractArtifacts } from "@/components/agentforge/artifact-card"
+import { ArtifactCard, extractArtifacts, stripCodeBlocks } from "@/components/agentforge/artifact-card"
 import { ProjectPreview } from "@/components/agentforge/project-preview"
 import { SkillsMenu } from "@/components/agentforge/skills-menu"
 import {
@@ -42,6 +42,7 @@ import {
   Check,
   Pencil,
   Globe,
+  FileCode,
 } from "lucide-react"
 
 type ToolCall = {
@@ -755,7 +756,7 @@ function MessageBubble({ m, onEdit, onResend }: { m: Msg; onEdit?: (id: string, 
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(m.content)
+      await navigator.clipboard.writeText(displayContent || m.content)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
       toast({ title: "Mensagem copiada" })
@@ -773,6 +774,11 @@ function MessageBubble({ m, onEdit, onResend }: { m: Msg; onEdit?: (id: string, 
   }
 
   const artifacts = m.role === "assistant" && !m.streaming && m.content ? extractArtifacts(m.content) : []
+  // Show only narration text (code blocks stripped) in the message bubble
+  // During streaming, show the full content so user sees code being generated
+  const displayContent = m.role === "assistant" && !m.streaming && artifacts.length > 0
+    ? stripCodeBlocks(m.content)
+    : m.content
 
   return (
     <div className={`flex gap-3 ${m.role === "user" ? "flex-row-reverse" : ""}`}>
@@ -826,15 +832,15 @@ function MessageBubble({ m, onEdit, onResend }: { m: Msg; onEdit?: (id: string, 
             </div>
           </div>
         ) : (
-          m.content && (
+          displayContent && (
             <div
-              className={`rounded-lg px-3 py-2 text-sm leading-relaxed break-words ${
+              className={`rounded-lg px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap ${
                 m.role === "user"
                   ? "bg-secondary text-secondary-foreground"
                   : "bg-card border border-border/60"
               }`}
             >
-              {m.content}
+              {displayContent}
               {m.streaming && m.content && (
                 <span className="inline-block w-2 h-4 ml-1 bg-primary animate-pulse align-middle" />
               )}
@@ -842,9 +848,13 @@ function MessageBubble({ m, onEdit, onResend }: { m: Msg; onEdit?: (id: string, 
           )
         )}
 
-        {/* Artifacts */}
+        {/* Attached files — code extracted from response */}
         {artifacts.length > 0 && (
           <div className="space-y-2">
+            <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+              <FileCode className="w-3 h-3" />
+              {artifacts.length === 1 ? "Arquivo gerado" : `${artifacts.length} arquivos gerados`}
+            </div>
             {artifacts.map((art) => (
               <ArtifactCard
                 key={art.id}
