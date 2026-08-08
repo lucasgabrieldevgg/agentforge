@@ -38,12 +38,12 @@ import {
   FolderOpen,
 } from "lucide-react"
 
-type StreamingTool = {
+type ToolCall = {
   name: string
   args: Record<string, unknown>
   result?: unknown
   ok?: boolean
-  status: "running" | "done"
+  status?: "running" | "done"
 }
 
 type Msg = {
@@ -53,8 +53,8 @@ type Msg = {
   thinking?: string
   thinkingSource?: "native" | "synthetic" | "none"
   model?: string
-  toolCalls?: StreamingTool[]
   streaming?: boolean
+  toolCalls?: ToolCall[]
   ts: number
 }
 
@@ -192,18 +192,18 @@ export function ChatTab() {
         let thinkingSource: "native" | "synthetic" | "none" = "none"
         let model = preferredModel
         let finalToolCalls: any[] = []
-        const liveToolCalls: StreamingTool[] = []
+        const liveToolCalls: ToolCall[] = []
 
         const persistAiMsg = (updates: Partial<Msg>) => {
           updateMessage(projectId!, aiMsgId, updates)
         }
 
-        const addToolCallLive = (tool: StreamingTool) => {
+        const addToolCallLive = (tool: ToolCall) => {
           liveToolCalls.push(tool)
           persistAiMsg({ toolCalls: [...liveToolCalls] })
         }
 
-        const updateToolCallLive = (name: string, updates: Partial<StreamingTool>) => {
+        const updateToolCallLive = (name: string, updates: Partial<ToolCall>) => {
           const idx = liveToolCalls.findIndex(
             (t) => t.name === name && t.status === "running"
           )
@@ -766,7 +766,7 @@ function ThinkingBlock({
   )
 }
 
-function ToolCallBadge({ tc }: { tc: StreamingTool }) {
+function ToolCallBadge({ tc }: { tc: ToolCall }) {
   const [open, setOpen] = useState(false)
   const isRunning = tc.status === "running"
   return (
