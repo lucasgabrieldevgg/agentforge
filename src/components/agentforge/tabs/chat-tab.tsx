@@ -16,6 +16,8 @@ import { useSpeechRecognition, useSpeechSynthesis } from "@/hooks/use-speech"
 import { useProjectStore } from "@/stores/project-store"
 import { useAppStore } from "@/stores/app-store"
 import { ArtifactCard, extractArtifacts } from "@/components/agentforge/artifact-card"
+import { ProjectPreview } from "@/components/agentforge/project-preview"
+import { SkillsMenu } from "@/components/agentforge/skills-menu"
 import {
   Send,
   Mic,
@@ -34,9 +36,12 @@ import {
   Zap,
   Layers,
   Crown,
-  Cpu,
   Search,
   FolderOpen,
+  Copy,
+  Check,
+  Pencil,
+  Globe,
 } from "lucide-react"
 
 type ToolCall = {
@@ -97,6 +102,16 @@ export function ChatTab() {
     recommended?: boolean
   }>>([])
   const [hydrated, setHydrated] = useState(false)
+  const [showProjectPreview, setShowProjectPreview] = useState(false)
+  const [skills, setSkills] = useState<Array<{
+    name: string
+    display_name: string
+    description: string
+    slash_command: string
+    aliases: string[]
+    auto_trigger: boolean
+    enabled: boolean
+  }>>([])
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Load settings from active project (or defaults)
@@ -117,6 +132,17 @@ export function ChatTab() {
         if (d.models) setModels(d.models)
       })
       .catch(() => {})
+    fetch("/api/skills")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.skills) setSkills(d.skills)
+      })
+      .catch(() => {})
+
+    // Listen for "open project preview" event
+    const openPreview = () => setShowProjectPreview(true)
+    window.addEventListener("agentforge:open-project-preview", openPreview)
+    return () => window.removeEventListener("agentforge:open-project-preview", openPreview)
   }, [])
 
   useEffect(() => {
@@ -490,13 +516,47 @@ export function ChatTab() {
           )}
 
           {messages.map((m) => (
-            <MessageBubble key={m.id} m={m} />
+            <MessageBubble
+              key={m.id}
+              m={m}
+              onEdit={(id, content) => {
+                if (activeProjectId) {
+                  updateMessage(activeProjectId, id, { content })
+                }
+              }}
+              onResend={(id) => {
+                if (!activeProjectId) return
+                // Find the user message by id, delete all messages after it, then resend
+                const project = useProjectStore.getState().projects.find((p) => p.id === activeProjectId)
+                if (!project) return
+                const idx = project.messages.findIndex((m) => m.id === id)
+                if (idx < 0) return
+                const userMsg = project.messages[idx]
+                // Delete all messages after this user message (including the old AI reply)
+                const newMessages = project.messages.slice(0, idx + 1)
+                useProjectStore.setState((state) => ({
+                  projects: state.projects.map((p) =>
+                    p.id === activeProjectId ? { ...p, messages: newMessages, updatedAt: Date.now() } : p
+                  ),
+                }))
+                // Resend
+                sendMessage(userMsg.content)
+              }}
+            />
           ))}
         </div>
       </div>
 
       {/* Input area — ALWAYS visible, fixed at bottom */}
-      <div className="border-t border-border/50 bg-background/95 backdrop-blur-sm shrink-0">
+      <div className="border-t border-border/50 bg-background/95 backdrop-blur-sm shrink-0 relative">
+        {/* Skills menu (appears above input when user types /) */}
+        <SkillsMenu
+          input={input}
+          skills={skills}
+          onPick={(cmd) => {
+            setInput(`/${cmd} `)
+          }}
+        />
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto p-3 space-y-2">
           <div className="flex items-end gap-2">
             <Textarea
@@ -619,42 +679,19 @@ export function ChatTab() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-1 px-2 py-1 rounded-md border border-border/40 bg-secondary/40">
-                <Cpu className="w-3 h-3 text-primary shrink-0" />
-                <Select
-                  value={preferredModel}
-                  onValueChange={changeModel}
-                >
-                  <SelectTrigger className="h-6 w-[140px] text-xs font-mono border-0 bg-transparent p-0 focus:ring-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {models.length === 0 ? (
-                      <SelectItem value={preferredModel} className="text-xs font-mono">
-                        {preferredModel}
-                      </SelectItem>
-                    ) : (
-                      models.map((m) => (
-                        <SelectItem key={m.id} value={m.id} className="text-xs font-mono py-2">
-                          <div className="flex flex-col gap-0.5">
-                            <div className="flex items-center gap-1.5">
-                              {m.hasNativeThinking && <Brain className="w-3 h-3 text-primary shrink-0" />}
-                              {m.recommended && <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />}
-                              <span className="font-semibold">{m.name}</span>
-                              <span className="text-[9px] text-muted-foreground">
-                                {Math.round(m.contextLength / 1000)}K
-                              </span>
-                            </div>
-                            <span className="text-[10px] text-muted-foreground truncate max-w-[180px]">
-                              {m.description.slice(0, 70)}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent("agentforge:open-project-preview"))
+                }}
+                className="text-xs font-mono text-primary"
+                title="Ver preview do projeto"
+              >
+                <Globe className="w-3 h-3 mr-1" />
+                Preview
+              </Button>
               <Button
                 type="button"
                 variant="ghost"
@@ -678,11 +715,48 @@ export function ChatTab() {
           )}
         </form>
       </div>
+
+      {/* Project Preview modal */}
+      {showProjectPreview && activeProject && (
+        <ProjectPreview
+          artifacts={activeProject.messages
+            .filter((m) => m.role === "assistant" && m.content)
+            .flatMap((m) => extractArtifacts(m.content || ""))}
+          workspaceFiles={activeProject.workspace}
+          onClose={() => setShowProjectPreview(false)}
+        />
+      )}
     </div>
   )
 }
 
-function MessageBubble({ m }: { m: Msg }) {
+function MessageBubble({ m, onEdit, onResend }: { m: Msg; onEdit?: (id: string, content: string) => void; onResend?: (id: string) => void }) {
+  const [copied, setCopied] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editContent, setEditContent] = useState(m.content)
+  const { toast } = useToast()
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(m.content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+      toast({ title: "Mensagem copiada" })
+    } catch {
+      toast({ title: "Erro ao copiar", variant: "destructive" })
+    }
+  }
+
+  const handleSaveEdit = () => {
+    if (onEdit && editContent.trim() !== m.content) {
+      onEdit(m.id, editContent.trim())
+      if (onResend) onResend(m.id)
+    }
+    setEditing(false)
+  }
+
+  const artifacts = m.role === "assistant" && !m.streaming && m.content ? extractArtifacts(m.content) : []
+
   return (
     <div className={`flex gap-3 ${m.role === "user" ? "flex-row-reverse" : ""}`}>
       <div
@@ -693,20 +767,20 @@ function MessageBubble({ m }: { m: Msg }) {
         }`}
       >
         {m.role === "user" ? (
-          <span className="text-xs font-mono">USER</span>
+          <span className="text-[10px] font-mono">USER</span>
         ) : m.streaming && !m.content ? (
           <Loader2 className="w-4 h-4 text-primary animate-spin" />
         ) : (
           <Sparkles className="w-4 h-4 text-primary" />
         )}
       </div>
-      <div className="max-w-[85%] space-y-2 min-w-0">
-        {/* Thinking block — shown while streaming or after */}
-        {m.role === "assistant" && m.thinking && (
-          <ThinkingBlock thinking={m.thinking} source={m.thinkingSource} streaming={m.streaming} />
+      <div className="max-w-[85%] space-y-2 min-w-0 group">
+        {/* Thinking block */}
+        {m.role === "assistant" && (m.thinking || (m.streaming && !m.content)) && (
+          <ThinkingBlock thinking={m.thinking || ""} source={m.thinkingSource} streaming={m.streaming} />
         )}
 
-        {/* Tool calls — shown in real-time as they happen */}
+        {/* Tool calls */}
         {m.role === "assistant" && m.toolCalls && m.toolCalls.length > 0 && (
           <div className="space-y-1">
             {m.toolCalls.map((tc, idx) => (
@@ -715,46 +789,60 @@ function MessageBubble({ m }: { m: Msg }) {
           </div>
         )}
 
-        {/* Main content */}
-        {m.content && (
-          <div
-            className={`rounded-lg px-3 py-2 text-sm leading-relaxed break-words ${
-              m.role === "user"
-                ? "bg-secondary text-secondary-foreground"
-                : "bg-card border border-border/60"
-            }`}
-          >
-            {m.content}
-            {m.streaming && m.content && (
-              <span className="inline-block w-2 h-4 ml-1 bg-primary animate-pulse align-middle" />
-            )}
+        {/* Main content or edit textarea */}
+        {editing ? (
+          <div className="space-y-2">
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              className="w-full rounded-lg px-3 py-2 text-sm bg-card border border-primary/40 font-mono resize-y min-h-[80px]"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleSaveEdit} className="font-mono text-xs">
+                <Check className="w-3 h-3 mr-1" />
+                Salvar e reenviar
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setEditing(false)} className="font-mono text-xs">
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          m.content && (
+            <div
+              className={`rounded-lg px-3 py-2 text-sm leading-relaxed break-words ${
+                m.role === "user"
+                  ? "bg-secondary text-secondary-foreground"
+                  : "bg-card border border-border/60"
+              }`}
+            >
+              {m.content}
+              {m.streaming && m.content && (
+                <span className="inline-block w-2 h-4 ml-1 bg-primary animate-pulse align-middle" />
+              )}
+            </div>
+          )
+        )}
+
+        {/* Artifacts */}
+        {artifacts.length > 0 && (
+          <div className="space-y-2">
+            {artifacts.map((art) => (
+              <ArtifactCard
+                key={art.id}
+                artifact={art}
+                onAddToWorkspace={(file) => {
+                  window.dispatchEvent(
+                    new CustomEvent("agentforge:add-to-workspace", { detail: file })
+                  )
+                }}
+              />
+            ))}
           </div>
         )}
 
-        {/* Artifacts — code blocks extracted from the response */}
-        {m.role === "assistant" && !m.streaming && m.content && (() => {
-          const artifacts = extractArtifacts(m.content)
-          if (artifacts.length === 0) return null
-          return (
-            <div className="space-y-2">
-              {artifacts.map((art) => (
-                <ArtifactCard
-                  key={art.id}
-                  artifact={art}
-                  onAddToWorkspace={(file) => {
-                    // This will be wired up by the parent via context
-                    // For now, we dispatch a custom event
-                    window.dispatchEvent(
-                      new CustomEvent("agentforge:add-to-workspace", { detail: file })
-                    )
-                  }}
-                />
-              ))}
-            </div>
-          )
-        })()}
-
-        {/* "Pesquisando..." indicator when only thinking/tools are showing */}
+        {/* "Pesquisando..." indicator */}
         {m.role === "assistant" && m.streaming && !m.content && (
           <div className="bg-card border border-border/60 rounded-lg px-3 py-2 text-sm text-muted-foreground font-mono flex items-center gap-2">
             <Search className="w-3 h-3 animate-pulse" />
@@ -774,9 +862,57 @@ function MessageBubble({ m }: { m: Msg }) {
           </div>
         )}
 
-        <p className="text-[10px] text-muted-foreground font-mono">
-          {new Date(m.ts).toLocaleTimeString("pt-BR")}
-        </p>
+        {/* Action buttons — appear on hover (or always on mobile) */}
+        {!editing && !m.streaming && m.content && (
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-1.5 text-[10px] font-mono text-muted-foreground"
+              onClick={handleCopy}
+            >
+              {copied ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-3 h-3" />}
+            </Button>
+            {m.role === "user" && onEdit && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-1.5 text-[10px] font-mono text-muted-foreground"
+                onClick={() => {
+                  setEditContent(m.content)
+                  setEditing(true)
+                }}
+                title="Editar mensagem"
+              >
+                <Pencil className="w-3 h-3" />
+              </Button>
+            )}
+            {m.role === "assistant" && artifacts.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-1.5 text-[10px] font-mono text-primary"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent("agentforge:open-project-preview"))
+                }}
+                title="Ver preview do projeto"
+              >
+                <Globe className="w-3 h-3" />
+                <span className="ml-1">Preview</span>
+              </Button>
+            )}
+            <span className="text-[10px] text-muted-foreground font-mono ml-1">
+              {new Date(m.ts).toLocaleTimeString("pt-BR")}
+            </span>
+          </div>
+        )}
+
+        {/* Timestamp when no actions */}
+        {(editing || m.streaming || !m.content) && (
+          <p className="text-[10px] text-muted-foreground font-mono">
+            {new Date(m.ts).toLocaleTimeString("pt-BR")}
+          </p>
+        )}
       </div>
     </div>
   )
@@ -791,12 +927,23 @@ function ThinkingBlock({
   source?: "native" | "synthetic" | "none"
   streaming?: boolean
 }) {
-  const [open, setOpen] = useState(true) // open by default while streaming
+  const [open, setOpen] = useState(true)
+  const [userToggled, setUserToggled] = useState(false)
+
+  // Auto-open while streaming, unless user manually closed
+  useEffect(() => {
+    if (streaming && !userToggled) setOpen(true)
+  }, [streaming, userToggled])
+
+  const handleToggle = () => {
+    setUserToggled(true)
+    setOpen((v) => !v)
+  }
   const isNative = source === "native"
   return (
     <div className="rounded-lg border border-primary/30 bg-primary/5 overflow-hidden">
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggle}
         className="w-full flex items-center gap-2 px-3 py-2 text-xs font-mono hover:bg-primary/10 transition-colors"
       >
         {open ? <ChevronDown className="w-3 h-3 text-primary" /> : <ChevronRight className="w-3 h-3 text-primary" />}
@@ -818,7 +965,7 @@ function ThinkingBlock({
       </button>
       {open && (
         <pre className="px-3 pb-3 pt-1 text-xs font-mono whitespace-pre-wrap break-words text-muted-foreground border-t border-primary/20 max-h-60 overflow-y-auto">
-          {thinking}
+          {thinking || (streaming ? "Aguardando raciocínio do modelo..." : "")}
           {streaming && <span className="inline-block w-2 h-3 bg-primary animate-pulse align-middle ml-1" />}
         </pre>
       )}

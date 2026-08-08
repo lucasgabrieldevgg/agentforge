@@ -11,6 +11,7 @@ import {
   FolderPlus,
   Copy,
   Check,
+  RefreshCw,
 } from "lucide-react"
 import type { Artifact, WorkspaceFile } from "@/stores/project-store"
 import { useToast } from "@/hooks/use-toast"
@@ -43,41 +44,15 @@ export function extractArtifacts(content: string): Artifact[] {
 
 function guessFilename(language: string, idx: number): string {
   const extensions: Record<string, string> = {
-    javascript: "js",
-    js: "js",
-    typescript: "ts",
-    ts: "ts",
-    jsx: "jsx",
-    tsx: "tsx",
-    python: "py",
-    py: "py",
-    rust: "rs",
-    go: "go",
-    java: "java",
-    c: "c",
-    cpp: "cpp",
-    "c++": "cpp",
-    csharp: "cs",
-    cs: "cs",
-    php: "php",
-    ruby: "rb",
-    rb: "rb",
-    swift: "swift",
-    kotlin: "kt",
-    html: "html",
-    css: "css",
-    scss: "scss",
-    json: "json",
-    yaml: "yaml",
-    yml: "yml",
-    xml: "xml",
-    sql: "sql",
-    bash: "sh",
-    sh: "sh",
-    shell: "sh",
-    dockerfile: "Dockerfile",
-    markdown: "md",
-    md: "md",
+    javascript: "js", js: "js", typescript: "ts", ts: "ts",
+    jsx: "jsx", tsx: "tsx", python: "py", py: "py",
+    rust: "rs", go: "go", java: "java", c: "c", cpp: "cpp",
+    "c++": "cpp", csharp: "cs", cs: "cs", php: "php",
+    ruby: "rb", rb: "rb", swift: "swift", kotlin: "kt",
+    html: "html", css: "css", scss: "scss", json: "json",
+    yaml: "yaml", yml: "yml", xml: "xml", sql: "sql",
+    bash: "sh", sh: "sh", shell: "sh", dockerfile: "Dockerfile",
+    markdown: "md", md: "md",
   }
   const ext = extensions[language.toLowerCase()] || "txt"
   if (ext === "Dockerfile") return "Dockerfile"
@@ -85,28 +60,11 @@ function guessFilename(language: string, idx: number): string {
 }
 
 const LANGUAGE_LABELS: Record<string, string> = {
-  javascript: "JavaScript",
-  js: "JavaScript",
-  typescript: "TypeScript",
-  ts: "TypeScript",
-  jsx: "React JSX",
-  tsx: "React TSX",
-  python: "Python",
-  py: "Python",
-  rust: "Rust",
-  go: "Go",
-  java: "Java",
-  c: "C",
-  cpp: "C++",
-  php: "PHP",
-  ruby: "Ruby",
-  html: "HTML",
-  css: "CSS",
-  json: "JSON",
-  yaml: "YAML",
-  sql: "SQL",
-  bash: "Bash",
-  sh: "Shell",
+  javascript: "JavaScript", js: "JavaScript", typescript: "TypeScript", ts: "TypeScript",
+  jsx: "React JSX", tsx: "React TSX", python: "Python", py: "Python",
+  rust: "Rust", go: "Go", java: "Java", c: "C", cpp: "C++",
+  php: "PHP", ruby: "Ruby", html: "HTML", css: "CSS",
+  json: "JSON", yaml: "YAML", sql: "SQL", bash: "Bash", sh: "Shell",
   markdown: "Markdown",
 }
 
@@ -196,7 +154,7 @@ export function ArtifactCard({
               variant="ghost"
               className="h-7 px-2 text-xs font-mono"
               onClick={handleAddToWorkspace}
-              title="Adicionar ao workspace"
+              title="Adicionar ao workspace (atualiza se já existe)"
             >
               <FolderPlus className="w-3 h-3 mr-1" />
               <span className="hidden sm:inline">Workspace</span>
