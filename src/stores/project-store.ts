@@ -10,11 +10,13 @@ export type ProjectMessage = {
   thinking?: string
   thinkingSource?: "native" | "synthetic" | "none"
   model?: string
+  streaming?: boolean
   toolCalls?: Array<{
     name: string
     args: Record<string, unknown>
-    result: unknown
-    ok: boolean
+    result?: unknown
+    ok?: boolean
+    status?: "running" | "done"
   }>
   ts: number
 }
