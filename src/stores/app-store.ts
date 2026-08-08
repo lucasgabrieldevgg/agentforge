@@ -5,6 +5,7 @@ import { create } from "zustand"
 export type DashboardTab =
   | "projects"
   | "chat"
+  | "workspace"
   | "skills"
   | "integrations"
   | "keys"

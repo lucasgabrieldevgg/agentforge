@@ -15,10 +15,12 @@ import {
   Clock,
   FolderOpen,
   Download,
+  Code2,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { ChatTab } from "@/components/agentforge/tabs/chat-tab"
 import { ProjectsTab } from "@/components/agentforge/tabs/projects-tab"
+import { WorkspaceTab } from "@/components/agentforge/tabs/workspace-tab"
 import { SkillsTab } from "@/components/agentforge/tabs/skills-tab"
 import { IntegrationsTab } from "@/components/agentforge/tabs/integrations-tab"
 import { KeysTab } from "@/components/agentforge/tabs/keys-tab"
@@ -28,6 +30,7 @@ import { useToast } from "@/hooks/use-toast"
 const TABS: { id: DashboardTab; label: string; icon: typeof MessageSquare }[] = [
   { id: "projects", label: "Projetos", icon: FolderOpen },
   { id: "chat", label: "Agente", icon: MessageSquare },
+  { id: "workspace", label: "Workspace", icon: Code2 },
   { id: "skills", label: "Skills", icon: Sparkles },
   { id: "integrations", label: "Ferramentas", icon: Plug },
   { id: "keys", label: "API Keys", icon: KeyRound },
@@ -217,6 +220,7 @@ export function Dashboard({ onExit }: { onExit: () => void }) {
         <main className="flex-1 min-w-0 overflow-hidden">
           {activeTab === "projects" && <ProjectsTab />}
           {activeTab === "chat" && <ChatTab />}
+          {activeTab === "workspace" && <WorkspaceTab />}
           {activeTab === "skills" && <SkillsTab />}
           {activeTab === "integrations" && <IntegrationsTab />}
           {activeTab === "keys" && <KeysTab />}

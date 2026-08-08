@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useSpeechRecognition, useSpeechSynthesis } from "@/hooks/use-speech"
 import { useProjectStore } from "@/stores/project-store"
 import { useAppStore } from "@/stores/app-store"
+import { ArtifactCard, extractArtifacts } from "@/components/agentforge/artifact-card"
 import {
   Send,
   Mic,
@@ -100,7 +101,7 @@ export function ChatTab() {
 
   // Load settings from active project (or defaults)
   const ttsEnabled = activeProject?.settings.ttsEnabled ?? true
-  const thinkingEnabled = activeProject?.settings.thinkingEnabled ?? false
+  const thinkingLevel = activeProject?.settings.thinkingLevel ?? "quick"
   const deepResearchLevel = activeProject?.settings.deepResearchLevel ?? "high"
   const preferredModel = activeProject?.settings.model ?? "openai/gpt-oss-20b:free"
 
@@ -122,11 +123,24 @@ export function ChatTab() {
     if (transcript) setInput(transcript)
   }, [transcript])
 
+  const isNearBottomRef = useRef(true)
+
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    const el = scrollRef.current
+    if (!el) return
+    // Only auto-scroll if user is near the bottom (within 150px)
+    // This lets users scroll up to read history without being yanked back down
+    if (isNearBottomRef.current) {
+      el.scrollTop = el.scrollHeight
     }
   }, [messages])
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    isNearBottomRef.current = distanceFromBottom < 150
+  }, [])
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -172,7 +186,7 @@ export function ChatTab() {
           body: JSON.stringify({
             message: trimmed,
             history,
-            thinking: thinkingEnabled,
+            thinkingLevel,
             model: preferredModel,
           }),
         })
@@ -290,7 +304,7 @@ export function ChatTab() {
         setLoading(false)
       }
     },
-    [loading, messages, ttsEnabled, ttsSupported, speak, toast, thinkingEnabled, preferredModel, activeProjectId, addMessage, updateMessage, createProject]
+    [loading, messages, ttsEnabled, ttsSupported, speak, toast, thinkingLevel, preferredModel, activeProjectId, addMessage, updateMessage, createProject]
   )
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -361,15 +375,18 @@ export function ChatTab() {
     })
   }
 
-  const toggleThinking = () => {
+  const changeThinkingLevel = (level: "quick" | "high" | "max") => {
     if (activeProjectId) {
-      updateSettings(activeProjectId, { thinkingEnabled: !thinkingEnabled })
+      updateSettings(activeProjectId, { thinkingLevel: level })
     }
+    const names = { quick: "Quick", high: "High", max: "Max" }
     toast({
-      title: !thinkingEnabled ? "Modo Pensamento ativado" : "Modo Pensamento desativado",
-      description: !thinkingEnabled
-        ? "Modelos com thinking nativo usam direto. Outros recebem prompt CoT."
-        : "Respostas diretas, sem raciocínio exposto.",
+      title: "Thinking: " + names[level],
+      description: {
+        quick: "Sem raciocínio explícito. Respostas diretas.",
+        high: "Raciocínio nativo ou CoT sintético.",
+        max: "Raciocínio profundo + CoT injetado mesmo em modelos nativos.",
+      }[level],
     })
   }
 
@@ -443,7 +460,7 @@ export function ChatTab() {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto" ref={scrollRef} onScroll={handleScroll}>
         <div className="max-w-3xl mx-auto p-4 space-y-4">
           {messages.length === 0 && (
             <div className="text-center py-12 space-y-4">
@@ -540,17 +557,37 @@ export function ChatTab() {
                 {ttsEnabled ? <Volume2 className="w-3 h-3 mr-1" /> : <VolumeX className="w-3 h-3 mr-1" />}
                 {ttsEnabled ? "TTS ON" : "TTS OFF"}
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={toggleThinking}
-                className={`text-xs font-mono ${thinkingEnabled ? "text-primary" : ""}`}
-                title="Ativa raciocínio explícito antes da resposta"
-              >
-                <Brain className="w-3 h-3 mr-1" />
-                {thinkingEnabled ? "Thinking ON" : "Thinking OFF"}
-              </Button>
+              <div className="flex items-center gap-1 px-2 py-1 rounded-md border border-border/40 bg-secondary/40">
+                <Brain className="w-3 h-3 text-primary shrink-0" />
+                <Select
+                  value={thinkingLevel}
+                  onValueChange={(v) => changeThinkingLevel(v as "quick" | "high" | "max")}
+                >
+                  <SelectTrigger className="h-6 w-[100px] text-xs font-mono border-0 bg-transparent p-0 focus:ring-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="quick" className="text-xs font-mono">
+                      <div className="flex items-center gap-2">
+                        <Zap className="w-3 h-3 text-amber-400" />
+                        <span>Think: Quick</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="high" className="text-xs font-mono">
+                      <div className="flex items-center gap-2">
+                        <Layers className="w-3 h-3 text-primary" />
+                        <span>Think: High</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="max" className="text-xs font-mono">
+                      <div className="flex items-center gap-2">
+                        <Crown className="w-3 h-3 text-purple-400" />
+                        <span>Think: Max</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex items-center gap-1 px-2 py-1 rounded-md border border-border/40 bg-secondary/40">
                 <Telescope className="w-3 h-3 text-primary shrink-0" />
                 <Select
@@ -693,6 +730,29 @@ function MessageBubble({ m }: { m: Msg }) {
             )}
           </div>
         )}
+
+        {/* Artifacts — code blocks extracted from the response */}
+        {m.role === "assistant" && !m.streaming && m.content && (() => {
+          const artifacts = extractArtifacts(m.content)
+          if (artifacts.length === 0) return null
+          return (
+            <div className="space-y-2">
+              {artifacts.map((art) => (
+                <ArtifactCard
+                  key={art.id}
+                  artifact={art}
+                  onAddToWorkspace={(file) => {
+                    // This will be wired up by the parent via context
+                    // For now, we dispatch a custom event
+                    window.dispatchEvent(
+                      new CustomEvent("agentforge:add-to-workspace", { detail: file })
+                    )
+                  }}
+                />
+              ))}
+            </div>
+          )
+        })()}
 
         {/* "Pesquisando..." indicator when only thinking/tools are showing */}
         {m.role === "assistant" && m.streaming && !m.content && (

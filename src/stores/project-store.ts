@@ -18,7 +18,26 @@ export type ProjectMessage = {
     ok?: boolean
     status?: "running" | "done"
   }>
+  artifacts?: Artifact[]
   ts: number
+}
+
+export type Artifact = {
+  id: string
+  filename: string
+  language: string
+  content: string
+  createdAt: number
+}
+
+export type WorkspaceFile = {
+  id: string
+  name: string
+  path: string
+  language: string
+  content: string
+  createdAt: number
+  updatedAt: number
 }
 
 export type Project = {
@@ -29,9 +48,10 @@ export type Project = {
   settings: {
     model?: string
     deepResearchLevel?: "quick" | "high" | "max"
-    thinkingEnabled?: boolean
+    thinkingLevel?: "quick" | "high" | "max"
     ttsEnabled?: boolean
   }
+  workspace: WorkspaceFile[]
   createdAt: number
   updatedAt: number
 }
@@ -47,6 +67,9 @@ type ProjectState = {
   updateMessage: (projectId: string, messageId: string, updates: Partial<ProjectMessage>) => void
   clearMessages: (projectId: string) => void
   updateSettings: (projectId: string, settings: Partial<Project["settings"]>) => void
+  addWorkspaceFile: (projectId: string, file: Omit<WorkspaceFile, "id" | "createdAt" | "updatedAt">) => string
+  updateWorkspaceFile: (projectId: string, fileId: string, updates: Partial<WorkspaceFile>) => void
+  deleteWorkspaceFile: (projectId: string, fileId: string) => void
   exportProject: (id: string) => string | null
   importProject: (json: string) => string | null
 }
@@ -71,9 +94,10 @@ export const useProjectStore = create<ProjectState>()(
           settings: {
             model: "openai/gpt-oss-20b:free",
             deepResearchLevel: "high",
-            thinkingEnabled: false,
+            thinkingLevel: "quick",
             ttsEnabled: true,
           },
+          workspace: [],
           createdAt: now,
           updatedAt: now,
         }
@@ -146,6 +170,51 @@ export const useProjectStore = create<ProjectState>()(
           projects: state.projects.map((p) =>
             p.id === projectId
               ? { ...p, settings: { ...p.settings, ...settings }, updatedAt: Date.now() }
+              : p
+          ),
+        }))
+      },
+
+      addWorkspaceFile: (projectId, file) => {
+        const fileId = `file_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+        const now = Date.now()
+        const wsFile: WorkspaceFile = {
+          ...file,
+          id: fileId,
+          createdAt: now,
+          updatedAt: now,
+        }
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === projectId
+              ? { ...p, workspace: [...p.workspace, wsFile], updatedAt: now }
+              : p
+          ),
+        }))
+        return fileId
+      },
+
+      updateWorkspaceFile: (projectId, fileId, updates) => {
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === projectId
+              ? {
+                  ...p,
+                  workspace: p.workspace.map((f) =>
+                    f.id === fileId ? { ...f, ...updates, updatedAt: Date.now() } : f
+                  ),
+                  updatedAt: Date.now(),
+                }
+              : p
+          ),
+        }))
+      },
+
+      deleteWorkspaceFile: (projectId, fileId) => {
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === projectId
+              ? { ...p, workspace: p.workspace.filter((f) => f.id !== fileId), updatedAt: Date.now() }
               : p
           ),
         }))
