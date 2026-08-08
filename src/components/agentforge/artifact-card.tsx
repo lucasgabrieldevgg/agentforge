@@ -1,0 +1,223 @@
+"use client"
+
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import {
+  FileCode,
+  Download,
+  Eye,
+  X,
+  FolderPlus,
+  Copy,
+  Check,
+} from "lucide-react"
+import type { Artifact, WorkspaceFile } from "@/stores/project-store"
+import { useToast } from "@/hooks/use-toast"
+
+// Parse code blocks from markdown content
+export function extractArtifacts(content: string): Artifact[] {
+  const artifacts: Artifact[] = []
+  // Match ```language\ncontent``` blocks
+  const pattern = /```(\w+)?\n([\s\S]*?)```/g
+  let match
+  let idx = 0
+  while ((match = pattern.exec(content)) !== null) {
+    const language = match[1] || "text"
+    const code = match[2].trim()
+    // Only create artifact if code block is substantial (> 20 chars)
+    if (code.length > 20) {
+      const filename = guessFilename(language, idx)
+      artifacts.push({
+        id: `artifact_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
+        filename,
+        language,
+        content: code,
+        createdAt: Date.now(),
+      })
+      idx++
+    }
+  }
+  return artifacts
+}
+
+function guessFilename(language: string, idx: number): string {
+  const extensions: Record<string, string> = {
+    javascript: "js",
+    js: "js",
+    typescript: "ts",
+    ts: "ts",
+    jsx: "jsx",
+    tsx: "tsx",
+    python: "py",
+    py: "py",
+    rust: "rs",
+    go: "go",
+    java: "java",
+    c: "c",
+    cpp: "cpp",
+    "c++": "cpp",
+    csharp: "cs",
+    cs: "cs",
+    php: "php",
+    ruby: "rb",
+    rb: "rb",
+    swift: "swift",
+    kotlin: "kt",
+    html: "html",
+    css: "css",
+    scss: "scss",
+    json: "json",
+    yaml: "yaml",
+    yml: "yml",
+    xml: "xml",
+    sql: "sql",
+    bash: "sh",
+    sh: "sh",
+    shell: "sh",
+    dockerfile: "Dockerfile",
+    markdown: "md",
+    md: "md",
+  }
+  const ext = extensions[language.toLowerCase()] || "txt"
+  if (ext === "Dockerfile") return "Dockerfile"
+  return `snippet-${idx + 1}.${ext}`
+}
+
+const LANGUAGE_LABELS: Record<string, string> = {
+  javascript: "JavaScript",
+  js: "JavaScript",
+  typescript: "TypeScript",
+  ts: "TypeScript",
+  jsx: "React JSX",
+  tsx: "React TSX",
+  python: "Python",
+  py: "Python",
+  rust: "Rust",
+  go: "Go",
+  java: "Java",
+  c: "C",
+  cpp: "C++",
+  php: "PHP",
+  ruby: "Ruby",
+  html: "HTML",
+  css: "CSS",
+  json: "JSON",
+  yaml: "YAML",
+  sql: "SQL",
+  bash: "Bash",
+  sh: "Shell",
+  markdown: "Markdown",
+}
+
+export function ArtifactCard({
+  artifact,
+  onAddToWorkspace,
+}: {
+  artifact: Artifact
+  onAddToWorkspace?: (file: Omit<WorkspaceFile, "id" | "createdAt" | "updatedAt">) => void
+}) {
+  const [showPreview, setShowPreview] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const { toast } = useToast()
+
+  const handleDownload = () => {
+    const blob = new Blob([artifact.content], { type: "text/plain;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = artifact.filename
+    a.click()
+    URL.revokeObjectURL(url)
+    toast({ title: "Download iniciado", description: artifact.filename })
+  }
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(artifact.content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+      toast({ title: "Copiado!" })
+    } catch {
+      toast({ title: "Erro ao copiar", variant: "destructive" })
+    }
+  }
+
+  const handleAddToWorkspace = () => {
+    if (onAddToWorkspace) {
+      onAddToWorkspace({
+        name: artifact.filename,
+        path: artifact.filename,
+        language: artifact.language,
+        content: artifact.content,
+      })
+      toast({ title: "Adicionado ao workspace", description: artifact.filename })
+    }
+  }
+
+  const label = LANGUAGE_LABELS[artifact.language.toLowerCase()] || artifact.language
+  const lineCount = artifact.content.split("\n").length
+
+  return (
+    <div className="rounded-lg border border-primary/30 bg-primary/5 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-primary/20 bg-primary/5">
+        <div className="flex items-center gap-2 min-w-0">
+          <FileCode className="w-4 h-4 text-primary shrink-0" />
+          <span className="font-mono text-sm font-semibold truncate">{artifact.filename}</span>
+          <Badge variant="outline" className="text-[9px] py-0 px-1 text-primary border-primary/30 shrink-0">
+            {label}
+          </Badge>
+          <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+            {lineCount} linhas
+          </span>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs font-mono"
+            onClick={() => setShowPreview(!showPreview)}
+          >
+            <Eye className="w-3 h-3 mr-1" />
+            {showPreview ? "Ocultar" : "Preview"}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs font-mono"
+            onClick={handleCopy}
+          >
+            {copied ? <Check className="w-3 h-3 mr-1 text-primary" /> : <Copy className="w-3 h-3 mr-1" />}
+            {copied ? "Copiado" : "Copiar"}
+          </Button>
+          {onAddToWorkspace && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs font-mono"
+              onClick={handleAddToWorkspace}
+              title="Adicionar ao workspace"
+            >
+              <FolderPlus className="w-3 h-3 mr-1" />
+              <span className="hidden sm:inline">Workspace</span>
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs font-mono text-primary"
+            onClick={handleDownload}
+          >
+            <Download className="w-3 h-3 mr-1" />
+            <span className="hidden sm:inline">Baixar</span>
+          </Button>
+        </div>
+      </div>
+      {showPreview && (
+        <pre className="p-3 text-xs font-mono whitespace-pre-wrap break-words text-muted-foreground bg-card/40 max-h-80 overflow-y-auto border-t border-primary/20">
+          <code>{artifact.content}</code>
+        </pre>
+      )}
+    </div>
+  )
+}

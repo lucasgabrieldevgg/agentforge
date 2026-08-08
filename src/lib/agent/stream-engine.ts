@@ -39,10 +39,22 @@ function modelHasNativeThinking(model: string): boolean {
   return NATIVE_THINKING_PATTERNS.some((p) => p.test(model))
 }
 
-const COT_PROMPT = `
+const COT_PROMPT_HIGH = `
 Antes de responder, você DEVE raciocinar passo a passo dentro de uma tag <thinking>...</thinking>.
 Dentro da tag, explore o problema, considere alternativas, decida que ferramentas usar.
 Depois de fechar a tag </thinking>, forneça a resposta final ao usuário de forma clara e concisa.
+`.trim()
+
+const COT_PROMPT_MAX = `
+Antes de responder, você DEVE raciocinar profundamente dentro de uma tag <thinking>...</thinking>.
+Dentro da tag:
+1. Analise o problema de múltiplas perspectivas
+2. Liste possíveis abordagens e escolha a melhor com justificativa
+3. Considere edge cases e possíveis erros
+4. Decida que ferramentas usar e por quê
+5. Só depois forneça a resposta final após </thinking>
+
+Seja rigoroso e completo no raciocínio. Pense como um especialista.
 `.trim()
 
 function extractThinking(content: string): { thinking: string; reply: string } {
@@ -56,16 +68,32 @@ function extractThinking(content: string): { thinking: string; reply: string } {
   return { thinking: "", reply: content.trim() }
 }
 
-const SYSTEM_PROMPT = `Você é o AgentForge — um assistente pessoal inteligente criado para ajudar o user no dia a dia.
+const SYSTEM_PROMPT = `Você é o AgentForge — um assistente pessoal inteligente e autônomo.
 
-Diretrizes:
+Você é autônomo: decide sozinho quando usar ferramentas, skills e pesquisas. Não precisa pedir permissão ao usuário pra pesquisar ou usar uma ferramenta — se julgar necessário, use.
+
+## Ferramentas disponíveis
+- **get_current_datetime**: data e hora atuais
+- **calculate**: expressões matemáticas
+- **search_wikipedia**: busca rápida num idioma (fall automático pra outros idiomas)
+- **deep_research**: pesquisa aprofundada em múltiplos idiomas com artigos relacionados. Use quando o assunto for complexo, tiver múltiplas facetas, ou o user pedir pra pesquisar "a fundo". Você pode pesquisar QUALQUER assunto — é autônomo.
+- **get_weather**: clima atual de qualquer cidade
+- **get_exchange_rate**: conversão de moedas
+- **get_country_info**: dados de países
+- **convert_units**: conversão de unidades
+- **generate_password**: senhas seguras
+
+## Skills disponíveis (via /comando ou automático)
+- /translate, /summarize, /rewrite, /code, /explain, /define, /todo, /joke, /uuid, /hash
+
+## Diretrizes
 - Responda sempre em português do Brasil, de forma clara e amigável.
-- Quando precisar de informações externas (clima, data, cálculos, busca na Wikipedia), USE as ferramentas disponíveis.
-- Seja conciso nas respostas, mas completo. Evite enrolação.
-- Se uma ferramenta falhar por falta de chave de API, explique ao user como configurar em "API Keys".
-- Você pode encadear múltiplas chamadas de ferramentas se necessário.
-
-Sempre pense no que o user precisa e use as ferramentas proativamente.`
+- USE ferramentas proativamente quando precisar de dados externos. Não invente números, datas ou fatos.
+- Para perguntas complexas, use deep_research. Para perguntas simples, use search_wikipedia.
+- Se uma ferramenta falhar, explique e sugira alternativa.
+- Quando gerar código, use blocos markdown com a linguagem correta (ex: \`\`\`python).
+- Seja conciso nas respostas diretas, mas completo em explicações.
+- Você pode encadear múltiplas chamadas de ferramentas se necessário.`
 
 function schemaToOpenRouter(schema: ToolSchema) {
   const properties: Record<string, unknown> = {}
@@ -91,7 +119,7 @@ export async function runAgentStream(opts: {
   userMessage: string
   history: OpenRouterMessage[]
   model?: string
-  thinking?: boolean
+  thinkingLevel?: "quick" | "high" | "max"
   onEvent: StreamCallback
 }): Promise<{
   reply: string
@@ -105,7 +133,9 @@ export async function runAgentStream(opts: {
     ok: boolean
   }>
 }> {
-  const { userId, userMessage, history, model, thinking: thinkingEnabled = false, onEvent } = opts
+  const { userId, userMessage, history, model, thinkingLevel = "quick", onEvent } = opts
+  const thinkingEnabled = thinkingLevel !== "quick"
+  const isMaxThinking = thinkingLevel === "max"
 
   const integrations = await db.integration.findMany({ where: { userId } })
   const enabledSchemas = getEnabledTools(integrations)
@@ -151,8 +181,16 @@ export async function runAgentStream(opts: {
 
   const selectedModel = model || userRow?.preferredModel || "openai/gpt-oss-20b:free"
   const nativeThinking = modelHasNativeThinking(selectedModel)
-  const useSyntheticCoT = thinkingEnabled && !nativeThinking
-  const systemPrompt = useSyntheticCoT ? `${SYSTEM_PROMPT}\n\n${COT_PROMPT}` : SYSTEM_PROMPT
+  // Determine thinking strategy based on level:
+  // - quick: no thinking injection (native models still reason naturally)
+  // - high: inject CoT for non-native models; native models use their own reasoning
+  // - max: inject deep CoT for ALL models (even native ones get extra reasoning prompt)
+  const useSyntheticCoT = thinkingEnabled && (!nativeThinking || isMaxThinking)
+  const cotPrompt = isMaxThinking ? COT_PROMPT_MAX : COT_PROMPT_HIGH
+  const systemPrompt = useSyntheticCoT ? `${SYSTEM_PROMPT}\n\n${cotPrompt}` : SYSTEM_PROMPT
+
+  // For models that support reasoning effort parameter (OpenRouter extension)
+  const reasoningEffort = thinkingLevel === "max" ? "high" : thinkingLevel === "high" ? "medium" : "low"
 
   const allToolCalls: Array<{
     name: string
@@ -216,7 +254,7 @@ export async function runAgentStream(opts: {
         { role: "system", content: result.systemOverride || systemPrompt },
         { role: "user", content: result.prompt || userMessage },
       ]
-      const skillResult = await streamLLM(skillMessages, selectedModel, openRouterKey, [], onEvent)
+      const skillResult = await streamLLM(skillMessages, selectedModel, openRouterKey, [], onEvent, reasoningEffort)
       finalReply = skillResult.content
       if (skillResult.reasoning) lastNativeReasoning = skillResult.reasoning
 
@@ -244,7 +282,8 @@ export async function runAgentStream(opts: {
       selectedModel,
       openRouterKey,
       allTools,
-      onEvent
+      onEvent,
+      reasoningEffort
     )
 
     if (streamResult.error) {
@@ -375,13 +414,27 @@ async function streamLLM(
   model: string,
   apiKey: string,
   tools: unknown[],
-  onEvent: StreamCallback
+  onEvent: StreamCallback,
+  reasoningEffort?: "low" | "medium" | "high"
 ): Promise<{
   content: string
   reasoning: string
   toolCalls: Array<{ id: string; name: string; arguments: string }>
   error?: string
 }> {
+  const body: Record<string, unknown> = {
+    model,
+    messages,
+    stream: true,
+    tools: tools.length ? tools : undefined,
+    tool_choice: tools.length ? "auto" : undefined,
+    temperature: 0.7,
+  }
+  // Add reasoning effort for models that support it (OpenRouter extension)
+  if (reasoningEffort) {
+    body.reasoning = { effort: reasoningEffort }
+  }
+
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -390,14 +443,7 @@ async function streamLLM(
       "HTTP-Referer": "https://agentforge.local",
       "X-Title": "AgentForge",
     },
-    body: JSON.stringify({
-      model,
-      messages,
-      stream: true,
-      tools: tools.length ? tools : undefined,
-      tool_choice: tools.length ? "auto" : undefined,
-      temperature: 0.7,
-    }),
+    body: JSON.stringify(body),
   })
 
   if (!res.ok) {
