@@ -1,20 +1,17 @@
 "use client"
 
-import { useSession, signOut } from "next-auth/react"
 import { useAppStore, type DashboardTab } from "@/stores/app-store"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Bot,
   MessageSquare,
   Plug,
   KeyRound,
   Brain,
-  Settings,
-  LogOut,
+  Sparkles,
+  ArrowLeft,
   Github,
   Clock,
-  Sparkles,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { ChatTab } from "@/components/agentforge/tabs/chat-tab"
@@ -22,7 +19,6 @@ import { SkillsTab } from "@/components/agentforge/tabs/skills-tab"
 import { IntegrationsTab } from "@/components/agentforge/tabs/integrations-tab"
 import { KeysTab } from "@/components/agentforge/tabs/keys-tab"
 import { MemoryTab } from "@/components/agentforge/tabs/memory-tab"
-import { SettingsTab } from "@/components/agentforge/tabs/settings-tab"
 
 const TABS: { id: DashboardTab; label: string; icon: typeof MessageSquare }[] = [
   { id: "chat", label: "Agente", icon: MessageSquare },
@@ -30,11 +26,9 @@ const TABS: { id: DashboardTab; label: string; icon: typeof MessageSquare }[] = 
   { id: "integrations", label: "Ferramentas", icon: Plug },
   { id: "keys", label: "API Keys", icon: KeyRound },
   { id: "memory", label: "Memória", icon: Brain },
-  { id: "settings", label: "Settings", icon: Settings },
 ]
 
-export function Dashboard() {
-  const { data: session } = useSession()
+export function Dashboard({ onExit }: { onExit: () => void }) {
   const { activeTab, setActiveTab } = useAppStore()
   const [now, setNow] = useState<string>("")
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -57,9 +51,6 @@ export function Dashboard() {
     const i = setInterval(tick, 1000)
     return () => clearInterval(i)
   }, [])
-
-  const user = session?.user
-  const initials = (user?.name || user?.email || "?").slice(0, 2).toUpperCase()
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -92,25 +83,29 @@ export function Dashboard() {
               <Clock className="w-3 h-3 text-primary" />
               {now}
             </div>
-            <div className="flex items-center gap-2">
-              <Avatar className="w-8 h-8 border border-border">
-                <AvatarFallback className="bg-primary/10 text-primary font-mono text-xs">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="hidden sm:block">
-                <p className="text-xs font-medium leading-none">{user?.name || "Você"}</p>
-                <p className="text-[10px] text-muted-foreground">{user?.email}</p>
-              </div>
-            </div>
             <Button
               variant="ghost"
-              size="icon"
-              onClick={() => signOut({ callbackUrl: "/" })}
-              className="text-muted-foreground hover:text-destructive"
-              title="Sair"
+              size="sm"
+              asChild
+              className="font-mono text-xs"
             >
-              <LogOut className="w-4 h-4" />
+              <a
+                href="https://github.com/lucasgabrieldevgg/agentforge"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Github className="w-3.5 h-3.5 mr-1" />
+                <span className="hidden sm:inline">GitHub</span>
+              </a>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onExit}
+              className="font-mono text-xs"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+              <span className="hidden sm:inline">Sair</span>
             </Button>
           </div>
         </div>
@@ -136,17 +131,10 @@ export function Dashboard() {
             ))}
           </nav>
           <div className="p-3 border-t border-border/40 space-y-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              asChild
-              className="w-full justify-start font-mono text-xs"
-            >
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer">
-                <Github className="w-3.5 h-3.5 mr-2" />
-                Ver código
-              </a>
-            </Button>
+            <div className="px-3 py-2 rounded-md bg-secondary/40 text-[10px] text-muted-foreground font-mono">
+              <p className="font-semibold text-foreground mb-1">Demo Mode</p>
+              <p>Sem sistema de contas. Dados são compartilhados entre todos os visitantes da demo.</p>
+            </div>
           </div>
         </aside>
 
@@ -190,7 +178,6 @@ export function Dashboard() {
           {activeTab === "integrations" && <IntegrationsTab />}
           {activeTab === "keys" && <KeysTab />}
           {activeTab === "memory" && <MemoryTab />}
-          {activeTab === "settings" && <SettingsTab />}
         </main>
       </div>
     </div>

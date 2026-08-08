@@ -1,21 +1,12 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { db } from "@/lib/db"
 import { SKILLS } from "@/lib/skills/registry"
+import { getDemoUserId } from "@/lib/demo-user"
 import { updateLastActive } from "@/lib/activity"
 
-// We reuse the Integration table to track enabled skills.
-// service = "skill:<name>" (e.g. "skill:translate")
-
 export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-  }
-  const userId = session.user.id
+  const userId = await getDemoUserId()
   const userIntegrations = await db.integration.findMany({ where: { userId } })
-  // Filter only skill:* integrations
   const skillIntegrations = userIntegrations.filter((i) => i.service.startsWith("skill:"))
   const enabledSet = new Set(
     skillIntegrations.filter((i) => i.enabled).map((i) => i.service.replace("skill:", ""))
@@ -41,11 +32,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-  }
-  const userId = session.user.id
+  const userId = await getDemoUserId()
   const body = await req.json().catch(() => ({}))
   const { skillName, enabled } = body as { skillName: string; enabled: boolean }
   if (!skillName) {

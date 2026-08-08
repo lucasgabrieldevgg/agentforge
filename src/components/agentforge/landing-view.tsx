@@ -1,6 +1,5 @@
 "use client"
 
-import { useAppStore } from "@/stores/app-store"
 import { Button } from "@/components/ui/button"
 import {
   Bot,
@@ -12,6 +11,7 @@ import {
   Zap,
   ShieldCheck,
   Code2,
+  Sparkles,
 } from "lucide-react"
 
 const FREE_APIS = [
@@ -19,16 +19,11 @@ const FREE_APIS = [
   { name: "Supabase", desc: "Banco + arquivos", limit: "500MB" },
   { name: "OpenRouter", desc: "LLM gratuito", limit: "Free tier" },
   { name: "Web Speech API", desc: "Voz nativa", limit: "Ilimitado" },
-  { name: "Gmail API", desc: "Emails", limit: "Grátis" },
-  { name: "OpenWeatherMap", desc: "Clima", limit: "1000/dia" },
+  { name: "Open-Meteo", desc: "Clima", limit: "Grátis" },
+  { name: "Frankfurter", desc: "Cotação de moedas", limit: "Grátis" },
 ]
 
 const FEATURES = [
-  {
-    icon: Brain,
-    title: "Memória diária estilo Jarvis",
-    desc: "O agente salva tudo que conversam em arquivos TXT diários. À meia-noite, fecha o arquivo e começa um novo — mas continua conseguindo acessar o passado.",
-  },
   {
     icon: Mic,
     title: "Voz nativa do navegador",
@@ -36,38 +31,32 @@ const FEATURES = [
   },
   {
     icon: Plug,
-    title: "Integrações plug-and-play",
-    desc: "Ative ferramentas com 1 clique: clima, calculadora, Wikipedia, Gmail, WhatsApp. Adicione suas próprias chaves — seus dados ficam com você.",
+    title: "Ferramentas plug-and-play",
+    desc: "Ative ferramentas com 1 clique: clima, calculadora, Wikipedia, cotação de moedas, países, conversor de unidades, gerador de senhas. Todas grátis.",
+  },
+  {
+    icon: Sparkles,
+    title: "Skills com /comandos",
+    desc: "Sistema de skills estilo Slack/Discord: /translate, /summarize, /code, /explain, /joke e mais. A IA também pode invocar skills automaticamente.",
+  },
+  {
+    icon: Brain,
+    title: "Modo Pensamento",
+    desc: "Suporta modelos com reasoning nativo (GPT-OSS, Nemotron Reasoning). Detecta automaticamente e mostra o raciocínio em bloco colapsável.",
   },
   {
     icon: Zap,
-    title: "Agente que usa ferramentas",
-    desc: "O LLM decide sozinho qual tool chamar pra responder. Pode encadear várias chamadas. Mode pensamento (thinking) em breve.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Suas chaves, seu controle",
-    desc: "Cada usuário cola a própria API key. A plataforma não paga nem armazena LLM em nome de ninguém. Privacidade total.",
+    title: "Deep Research em 3 níveis",
+    desc: "Pesquisa aprofundada na Wikipedia multi-idioma. Quick (1 idioma), High (3 idiomas + relacionados), Max (5 idiomas + 5 relacionados).",
   },
   {
     icon: Code2,
     title: "Open source no GitHub",
-    desc: "Suba no seu GitHub, faça fork, modifique. Construído com Next.js, Prisma e shadcn/ui — stack moderna e documentada.",
+    desc: "Suba no seu GitHub, faça fork, modifique. Construído com Next.js 16, Prisma, Tailwind 4 e shadcn/ui — stack moderna e documentada.",
   },
 ]
 
-export function LandingView() {
-  const { setView, setAuthMode } = useAppStore()
-
-  const goLogin = () => {
-    setAuthMode("login")
-    setView("auth")
-  }
-  const goSignup = () => {
-    setAuthMode("signup")
-    setView("auth")
-  }
-
+export function LandingView({ onEnter }: { onEnter: () => void }) {
   return (
     <div className="min-h-screen flex flex-col jarvis-grid">
       {/* Header */}
@@ -79,24 +68,31 @@ export function LandingView() {
             </div>
             <div>
               <h1 className="font-mono font-bold text-lg leading-none">AgentForge</h1>
-              <p className="text-[10px] text-muted-foreground font-mono">v0.1.0 — open source</p>
+              <p className="text-[10px] text-muted-foreground font-mono">v0.6.0 — open source demo</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
-              onClick={goLogin}
+              asChild
               className="font-mono"
             >
-              Entrar
+              <a
+                href="https://github.com/lucasgabrieldevgg/agentforge"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Github className="w-4 h-4 mr-1" />
+                GitHub
+              </a>
             </Button>
             <Button
               size="sm"
-              onClick={goSignup}
+              onClick={onEnter}
               className="font-mono glow-primary"
             >
-              Criar conta
+              Abrir demo
               <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
@@ -108,7 +104,7 @@ export function LandingView() {
         <div className="max-w-4xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary text-xs font-mono">
             <span className="w-1.5 h-1.5 rounded-full bg-primary voice-pulse" />
-            Plataforma de agentes pessoais — grátis e open source
+            Plataforma open source de agentes com IA
           </div>
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight">
             Construa seu{" "}
@@ -116,17 +112,17 @@ export function LandingView() {
             particular
           </h2>
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Uma plataforma que transforma APIs gratuitas em ferramentas para um agente
-            inteligente. Você cola suas chaves, ele faz o resto — fala, lembra, executa.
-            Roda até num celular velho.
+            Uma plataforma que transforma APIs gratuitas em ferramentas e skills para um
+            agente inteligente. Você cola suas chaves, ele faz o resto — fala, pesquisa,
+            executa. Roda até num celular velho.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
             <Button
               size="lg"
-              onClick={goSignup}
+              onClick={onEnter}
               className="font-mono text-base px-8 glow-primary"
             >
-              Começar agora
+              Experimentar a demo
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
             <Button
@@ -136,7 +132,7 @@ export function LandingView() {
               className="font-mono text-base px-8"
             >
               <a
-                href="https://github.com"
+                href="https://github.com/lucasgabrieldevgg/agentforge"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -146,7 +142,7 @@ export function LandingView() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground font-mono pt-2">
-            Stack: Next.js 16 · Prisma · shadcn/ui · OpenRouter · Web Speech API
+            Stack: Next.js 16 · Prisma · Tailwind 4 · shadcn/ui · OpenRouter · Web Speech API
           </p>
         </div>
       </section>
@@ -186,10 +182,10 @@ export function LandingView() {
       <section className="px-4 py-16 border-t border-border/40">
         <div className="max-w-6xl mx-auto">
           <h3 className="text-2xl font-bold text-center mb-2">
-            O que ele faz por você
+            O que ele faz
           </h3>
           <p className="text-center text-muted-foreground mb-10">
-            Features do MVP — e tem mais vindo aí.
+            Features da demo — tem mais no GitHub.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {FEATURES.map((feat) => (
@@ -208,10 +204,31 @@ export function LandingView() {
         </div>
       </section>
 
+      {/* CTA final */}
+      <section className="px-4 py-16 border-t border-border/40">
+        <div className="max-w-3xl mx-auto text-center space-y-6">
+          <h3 className="text-3xl font-bold">
+            Pronto pra testar?
+          </h3>
+          <p className="text-muted-foreground">
+            A demo roda direto no navegador. Pra conversar com o agente, você precisa
+            colar uma chave gratuita da OpenRouter (tem tutorial dentro).
+          </p>
+          <Button
+            size="lg"
+            onClick={onEnter}
+            className="font-mono text-base px-8 glow-primary"
+          >
+            Abrir demo agora
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="mt-auto border-t border-border/40 py-6 px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground font-mono">
-          <p>AgentForge — feito com ☕ e Next.js</p>
+          <p>AgentForge — feito com Next.js</p>
           <p>MIT License · 2026</p>
         </div>
       </footer>

@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { db } from "@/lib/db"
 import { INTEGRATION_MAP } from "@/lib/tools/registry"
+import { getDemoUserId } from "@/lib/demo-user"
 
 export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-  }
-  const keys = await db.apiKey.findMany({ where: { userId: session.user.id } })
-  // mask keys
+  const userId = await getDemoUserId()
+  const keys = await db.apiKey.findMany({ where: { userId } })
   const masked = keys.map((k) => ({
     id: k.id,
     service: k.service,
@@ -23,17 +18,12 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-  }
-  const userId = session.user.id
+  const userId = await getDemoUserId()
   const body = await req.json().catch(() => ({}))
   const { service, keyValue } = body as { service: string; keyValue: string }
   if (!service || !keyValue) {
     return NextResponse.json({ error: "service e keyValue obrigatórios" }, { status: 400 })
   }
-  // upsert
   const existing = await db.apiKey.findUnique({
     where: { userId_service: { userId, service } },
   })
@@ -52,11 +42,7 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-  }
-  const userId = session.user.id
+  const userId = await getDemoUserId()
   const { searchParams } = new URL(req.url)
   const service = searchParams.get("service")
   if (!service) return NextResponse.json({ error: "service obrigatório" }, { status: 400 })
