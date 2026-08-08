@@ -1,6 +1,7 @@
 "use client"
 
 import { useAppStore, type DashboardTab } from "@/stores/app-store"
+import { useProjectStore } from "@/stores/project-store"
 import { Button } from "@/components/ui/button"
 import {
   Bot,
@@ -12,15 +13,20 @@ import {
   ArrowLeft,
   Github,
   Clock,
+  FolderOpen,
+  Download,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { ChatTab } from "@/components/agentforge/tabs/chat-tab"
+import { ProjectsTab } from "@/components/agentforge/tabs/projects-tab"
 import { SkillsTab } from "@/components/agentforge/tabs/skills-tab"
 import { IntegrationsTab } from "@/components/agentforge/tabs/integrations-tab"
 import { KeysTab } from "@/components/agentforge/tabs/keys-tab"
 import { MemoryTab } from "@/components/agentforge/tabs/memory-tab"
+import { useToast } from "@/hooks/use-toast"
 
 const TABS: { id: DashboardTab; label: string; icon: typeof MessageSquare }[] = [
+  { id: "projects", label: "Projetos", icon: FolderOpen },
   { id: "chat", label: "Agente", icon: MessageSquare },
   { id: "skills", label: "Skills", icon: Sparkles },
   { id: "integrations", label: "Ferramentas", icon: Plug },
@@ -30,6 +36,8 @@ const TABS: { id: DashboardTab; label: string; icon: typeof MessageSquare }[] = 
 
 export function Dashboard({ onExit }: { onExit: () => void }) {
   const { activeTab, setActiveTab } = useAppStore()
+  const { projects, activeProjectId, exportProject } = useProjectStore()
+  const { toast } = useToast()
   const [now, setNow] = useState<string>("")
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -52,57 +60,91 @@ export function Dashboard({ onExit }: { onExit: () => void }) {
     return () => clearInterval(i)
   }, [])
 
+  const activeProject = projects.find((p) => p.id === activeProjectId)
+
+  const handleDownloadAll = () => {
+    if (projects.length === 0) {
+      toast({ title: "Nenhum projeto para baixar", variant: "destructive" })
+      return
+    }
+    const json = JSON.stringify(
+      { type: "agentforge-projects-export", version: 1, exportedAt: new Date().toISOString(), projects },
+      null,
+      2
+    )
+    const blob = new Blob([json], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `agentforge-all-projects-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast({ title: "Projetos baixados", description: `${projects.length} projetos` })
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top bar */}
       <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-40">
         <div className="h-14 px-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setMobileOpen((v) => !v)}
-              className="lg:hidden p-2 -ml-2 rounded-md hover:bg-secondary"
+              className="lg:hidden p-2 -ml-2 rounded-md hover:bg-secondary shrink-0"
               aria-label="Toggle menu"
             >
               <Bot className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-md bg-primary/10 border border-primary/30 flex items-center justify-center">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-md bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
                 <Bot className="w-4 h-4 text-primary" />
               </div>
-              <div className="hidden sm:block">
+              <div className="hidden sm:block min-w-0">
                 <h1 className="font-mono font-bold text-sm leading-none">AgentForge</h1>
-                <p className="text-[10px] text-muted-foreground font-mono">
+                <p className="text-[10px] text-muted-foreground font-mono truncate">
                   {TABS.find((t) => t.id === activeTab)?.label}
+                  {activeProject && activeTab === "chat" && ` · ${activeProject.name}`}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-md border border-border/60 bg-card/40 font-mono text-xs text-muted-foreground">
               <Clock className="w-3 h-3 text-primary" />
               {now}
             </div>
+            {/* Download button — always visible */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadAll}
+              className="font-mono text-xs shrink-0"
+              title="Baixar todos os projetos (JSON)"
+            >
+              <Download className="w-3.5 h-3.5 mr-1" />
+              <span className="hidden sm:inline">Baixar</span>
+            </Button>
             <Button
               variant="ghost"
               size="sm"
               asChild
-              className="font-mono text-xs"
+              className="font-mono text-xs shrink-0"
             >
               <a
                 href="https://github.com/lucasgabrieldevgg/agentforge"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Github className="w-3.5 h-3.5 mr-1" />
-                <span className="hidden sm:inline">GitHub</span>
+                <Github className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline ml-1">GitHub</span>
               </a>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={onExit}
-              className="font-mono text-xs"
+              className="font-mono text-xs shrink-0"
             >
               <ArrowLeft className="w-3.5 h-3.5 mr-1" />
               <span className="hidden sm:inline">Sair</span>
@@ -133,7 +175,7 @@ export function Dashboard({ onExit }: { onExit: () => void }) {
           <div className="p-3 border-t border-border/40 space-y-2">
             <div className="px-3 py-2 rounded-md bg-secondary/40 text-[10px] text-muted-foreground font-mono">
               <p className="font-semibold text-foreground mb-1">Demo Mode</p>
-              <p>Sem sistema de contas. Dados são compartilhados entre todos os visitantes da demo.</p>
+              <p>Sem contas. Dados salvos no navegador. Baixe antes de limpar.</p>
             </div>
           </div>
         </aside>
@@ -173,6 +215,7 @@ export function Dashboard({ onExit }: { onExit: () => void }) {
 
         {/* Main content */}
         <main className="flex-1 min-w-0 overflow-hidden">
+          {activeTab === "projects" && <ProjectsTab />}
           {activeTab === "chat" && <ChatTab />}
           {activeTab === "skills" && <SkillsTab />}
           {activeTab === "integrations" && <IntegrationsTab />}
