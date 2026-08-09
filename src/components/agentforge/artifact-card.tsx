@@ -17,16 +17,17 @@ import type { Artifact, WorkspaceFile } from "@/stores/project-store"
 import { useToast } from "@/hooks/use-toast"
 
 // Parse code blocks from markdown content
+// Handles BOTH complete (```...```) and incomplete (```... without closing) blocks
 export function extractArtifacts(content: string): Artifact[] {
   const artifacts: Artifact[] = []
-  // Match ```language\ncontent``` blocks
-  const pattern = /```(\w+)?\n([\s\S]*?)```/g
-  let match
   let idx = 0
-  while ((match = pattern.exec(content)) !== null) {
+
+  // First: match complete code blocks ```lang\ncontent```
+  const completePattern = /```(\w+)?\n([\s\S]*?)```/g
+  let match
+  while ((match = completePattern.exec(content)) !== null) {
     const language = match[1] || "text"
     const code = match[2].trim()
-    // Only create artifact if code block is substantial (> 20 chars)
     if (code.length > 20) {
       const filename = guessFilename(language, idx)
       artifacts.push({
@@ -39,13 +40,37 @@ export function extractArtifacts(content: string): Artifact[] {
       idx++
     }
   }
+
+  // Second: check for incomplete code blocks (opening ``` without closing)
+  // This happens when streaming is cut off by timeout
+  const incompletePattern = /```(\w+)?\n([\s\S]*?)$/
+  const incompleteMatch = content.match(incompletePattern)
+  if (incompleteMatch) {
+    const language = incompleteMatch[1] || "text"
+    const code = incompleteMatch[2].trim()
+    // Only add if it's substantial and NOT already captured by complete pattern
+    if (code.length > 20 && !artifacts.some((a) => a.content === code)) {
+      const filename = guessFilename(language, idx)
+      artifacts.push({
+        id: `artifact_incomplete_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
+        filename,
+        language,
+        content: code,
+        createdAt: Date.now(),
+      })
+      idx++
+    }
+  }
+
   return artifacts
 }
 
 // Strip code blocks from content, leaving only the narration text
+// Handles both complete and incomplete (unclosed) code blocks
 export function stripCodeBlocks(content: string): string {
   return content
-    .replace(/```(\w+)?\n[\s\S]*?```/g, "")
+    .replace(/```(\w+)?\n[\s\S]*?```/g, "") // complete blocks
+    .replace(/```(\w+)?\n[\s\S]*$/g, "") // incomplete blocks (no closing)
     .replace(/\n{3,}/g, "\n\n") // clean up extra newlines
     .trim()
 }
