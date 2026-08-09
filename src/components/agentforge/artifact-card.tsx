@@ -18,8 +18,10 @@ import { useToast } from "@/hooks/use-toast"
 
 // Parse code blocks from markdown content
 // Handles BOTH complete (```...```) and incomplete (```... without closing) blocks
+// Deduplicates by language (only one artifact per language type)
 export function extractArtifacts(content: string): Artifact[] {
   const artifacts: Artifact[] = []
+  const seenLanguages = new Set<string>()
   let idx = 0
 
   // First: match complete code blocks ```lang\ncontent```
@@ -28,7 +30,8 @@ export function extractArtifacts(content: string): Artifact[] {
   while ((match = completePattern.exec(content)) !== null) {
     const language = match[1] || "text"
     const code = match[2].trim()
-    if (code.length > 20) {
+    if (code.length > 20 && !seenLanguages.has(language)) {
+      seenLanguages.add(language)
       const filename = guessFilename(language, idx)
       artifacts.push({
         id: `artifact_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
@@ -48,8 +51,8 @@ export function extractArtifacts(content: string): Artifact[] {
   if (incompleteMatch) {
     const language = incompleteMatch[1] || "text"
     const code = incompleteMatch[2].trim()
-    // Only add if it's substantial and NOT already captured by complete pattern
-    if (code.length > 20 && !artifacts.some((a) => a.content === code)) {
+    // Only add if: substantial, NOT already captured, and language not seen
+    if (code.length > 20 && !artifacts.some((a) => a.content === code) && !seenLanguages.has(language)) {
       const filename = guessFilename(language, idx)
       artifacts.push({
         id: `artifact_incomplete_${Date.now()}_${idx}_${Math.random().toString(36).slice(2, 6)}`,
@@ -67,10 +70,13 @@ export function extractArtifacts(content: string): Artifact[] {
 
 // Strip code blocks from content, leaving only the narration text
 // Handles both complete and incomplete (unclosed) code blocks
+// Also strips <thinking> tags that models sometimes leak into the response
 export function stripCodeBlocks(content: string): string {
   return content
     .replace(/```(\w+)?\n[\s\S]*?```/g, "") // complete blocks
     .replace(/```(\w+)?\n[\s\S]*$/g, "") // incomplete blocks (no closing)
+    .replace(/<thinking>[\s\S]*?<\/thinking>\s*/gi, "") // complete thinking tags
+    .replace(/<thinking>[\s\S]*$/gi, "") // incomplete thinking tags
     .replace(/\n{3,}/g, "\n\n") // clean up extra newlines
     .trim()
 }
