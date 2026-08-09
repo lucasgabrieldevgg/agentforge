@@ -211,6 +211,131 @@ async function skill_joke(args: Record<string, unknown>): Promise<SkillResult> {
 }
 
 // ─────────────────────────────────────────────────────────────
+// New skills: color, regex, time, ascii
+// ─────────────────────────────────────────────────────────────
+
+async function skill_color(args: Record<string, unknown>): Promise<SkillResult> {
+  const base = String(args.base || "").trim()
+  const type = String(args.type || "complementar")
+  if (!base) return { ok: false, error: "base é obrigatório" }
+
+  // Simple color generation
+  return {
+    ok: true,
+    systemOverride:
+      "Você é um designer de cores. Gere uma paleta harmoniosa baseada na cor fornecida. " +
+      "Retorne as cores em hex com nomes sugestivos. Formato: lista de cores com hex e descrição.",
+    prompt: `Gere uma paleta de cores ${type} baseada em ${base}. ` +
+      `Inclua 5-7 cores harmoniosas com seus códigos hex e uma breve descrição de onde cada uma seria usada num site.`,
+  }
+}
+
+async function skill_regex(args: Record<string, unknown>): Promise<SkillResult> {
+  const description = String(args.description || "").trim()
+  if (!description) return { ok: false, error: "description é obrigatório" }
+  return {
+    ok: true,
+    systemOverride:
+      "Você é um especialista em expressões regulares. Crie um regex que matchee o padrão descrito. " +
+      "Explique cada parte do regex. Forneça exemplos de match e não-match.",
+    prompt: `Crie uma expressão regular para: ${description}`,
+  }
+}
+
+async function skill_time(args: Record<string, unknown>): Promise<SkillResult> {
+  const city = String(args.city || "").trim()
+  if (!city) return { ok: false, error: "city é obrigatório" }
+  const now = new Date()
+  const timeStr = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: cityToTimezone(city),
+    weekday: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(now)
+  return {
+    ok: true,
+    result: `🕐 ${city}: ${timeStr}`,
+  }
+}
+
+function cityToTimezone(city: string): string {
+  const map: Record<string, string> = {
+    "sao paulo": "America/Sao_Paulo",
+    "rio de janeiro": "America/Sao_Paulo",
+    "brasilia": "America/Sao_Paulo",
+    "new york": "America/New_York",
+    "los angeles": "America/Los_Angeles",
+    "london": "Europe/London",
+    "paris": "Europe/Paris",
+    "berlin": "Europe/Berlin",
+    "tokyo": "Asia/Tokyo",
+    "sydney": "Australia/Sydney",
+    "dubai": "Asia/Dubai",
+    "singapore": "Asia/Singapore",
+    "hong kong": "Asia/Hong_Kong",
+    "shanghai": "Asia/Shanghai",
+    "moscow": "Europe/Moscow",
+    "mumbai": "Asia/Kolkata",
+    "cairo": "Africa/Cairo",
+    "mexico city": "America/Mexico_City",
+    "buenos aires": "America/Argentina/Buenos_Aires",
+    "toronto": "America/Toronto",
+    "chicago": "America/Chicago",
+    "denver": "America/Denver",
+    "san francisco": "America/Los_Angeles",
+    "seattle": "America/Los_Angeles",
+    "miami": "America/New_York",
+    "boston": "America/New_York",
+    "amsterdam": "Europe/Amsterdam",
+    "madrid": "Europe/Madrid",
+    "rome": "Europe/Rome",
+    "lisbon": "Europe/Lisbon",
+    "stockholm": "Europe/Stockholm",
+    "oslo": "Europe/Oslo",
+    "helsinki": "Europe/Helsinki",
+    "dublin": "Europe/Dublin",
+    "vienna": "Europe/Vienna",
+    "zurich": "Europe/Zurich",
+    "seoul": "Asia/Seoul",
+    "bangkok": "Asia/Bangkok",
+    "jakarta": "Asia/Jakarta",
+    "manila": "Asia/Manila",
+    "auckland": "Pacific/Auckland",
+    "johannesburg": "Africa/Johannesburg",
+    "nairobi": "Africa/Nairobi",
+    "istanbul": "Europe/Istanbul",
+    "athens": "Europe/Athens",
+    "warsaw": "Europe/Warsaw",
+    "prague": "Europe/Prague",
+    "budapest": "Europe/Budapest",
+    "copenhagen": "Europe/Copenhagen",
+    "manaus": "America/Manaus",
+    "fortaleza": "America/Fortaleza",
+    "recife": "America/Recife",
+    "salvador": "America/Bahia",
+    "porto alegre": "America/Sao_Paulo",
+    "belo horizonte": "America/Sao_Paulo",
+    "curitiba": "America/Sao_Paulo",
+  }
+  const key = city.toLowerCase().trim()
+  return map[key] || "UTC"
+}
+
+async function skill_ascii(args: Record<string, unknown>): Promise<SkillResult> {
+  const text = String(args.text || "").trim()
+  if (!text) return { ok: false, error: "text é obrigatório" }
+  // Simple ASCII art generation using a basic font
+  return {
+    ok: true,
+    systemOverride:
+      "Você é um gerador de ASCII art. Crie arte ASCII bonita do texto fornecido. " +
+      "Use caracteres como #, @, *, +, -, |, /, \\, etc. Responda APENAS com a arte ASCII.",
+    prompt: `Crie arte ASCII para o texto: ${text}`,
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // Skill router
 // ─────────────────────────────────────────────────────────────
 
@@ -228,6 +353,10 @@ export const SKILL_IMPLEMENTATIONS: Record<
   define: skill_define,
   todo: skill_todo,
   joke: skill_joke,
+  color: skill_color,
+  regex: skill_regex,
+  time: skill_time,
+  ascii: skill_ascii,
 }
 
 export async function executeSkill(

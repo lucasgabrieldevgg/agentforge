@@ -19,6 +19,9 @@ import {
   Smile,
   Fingerprint,
   Hash,
+  Palette,
+  Clock,
+  Type,
   Sparkles,
   Zap,
   ShieldCheck,
@@ -36,6 +39,9 @@ const ICONS: Record<string, typeof Languages> = {
   Smile,
   Fingerprint,
   Hash,
+  Palette,
+  Clock,
+  Type,
 }
 
 type SkillItem = {

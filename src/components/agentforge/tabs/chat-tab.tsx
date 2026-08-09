@@ -99,6 +99,13 @@ export function ChatTab() {
   }>>([])
   const [hydrated, setHydrated] = useState(false)
   const [showProjectPreview, setShowProjectPreview] = useState(false)
+  const [previewArtifacts, setPreviewArtifacts] = useState<Array<{
+    id: string
+    filename: string
+    language: string
+    content: string
+    createdAt: number
+  }>>([])
   const [skills, setSkills] = useState<Array<{
     name: string
     display_name: string
@@ -146,8 +153,21 @@ export function ChatTab() {
       .catch(() => {})
 
     // Listen for "open project preview" event
-    const openPreview = () => setShowProjectPreview(true)
+    const openPreview = () => {
+      setPreviewArtifacts([])
+      setShowProjectPreview(true)
+    }
     window.addEventListener("agentforge:open-project-preview", openPreview)
+
+    // Listen for "open preview with specific artifact"
+    const openPreviewWithArtifact = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail?.artifact) {
+        setPreviewArtifacts([detail.artifact])
+        setShowProjectPreview(true)
+      }
+    }
+    window.addEventListener("agentforge:open-preview-with-artifact", openPreviewWithArtifact)
 
     // Close model picker when clicking outside
     const closeModelPicker = (e: MouseEvent) => {
@@ -160,6 +180,7 @@ export function ChatTab() {
 
     return () => {
       window.removeEventListener("agentforge:open-project-preview", openPreview)
+      window.removeEventListener("agentforge:open-preview-with-artifact", openPreviewWithArtifact)
       document.removeEventListener("click", closeModelPicker)
     }
   }, [])
@@ -745,11 +766,16 @@ export function ChatTab() {
       {/* Project Preview modal */}
       {showProjectPreview && activeProject && (
         <ProjectPreview
-          artifacts={activeProject.messages
-            .filter((m) => m.role === "assistant" && m.content)
-            .flatMap((m) => extractArtifacts(m.content || ""))}
+          artifacts={previewArtifacts.length > 0
+            ? previewArtifacts
+            : activeProject.messages
+                .filter((m) => m.role === "assistant" && m.content)
+                .flatMap((m) => extractArtifacts(m.content || ""))}
           workspaceFiles={activeProject.workspace}
-          onClose={() => setShowProjectPreview(false)}
+          onClose={() => {
+            setShowProjectPreview(false)
+            setPreviewArtifacts([])
+          }}
         />
       )}
     </div>
@@ -867,6 +893,14 @@ function MessageBubble({ m, onEdit, onResend }: { m: Msg; onEdit?: (id: string, 
               <ArtifactCard
                 key={art.id}
                 artifact={art}
+                onPreview={(artifact) => {
+                  // Open ProjectPreview with just this artifact
+                  window.dispatchEvent(
+                    new CustomEvent("agentforge:open-preview-with-artifact", {
+                      detail: { artifact }
+                    })
+                  )
+                }}
                 onAddToWorkspace={(file) => {
                   window.dispatchEvent(
                     new CustomEvent("agentforge:add-to-workspace", { detail: file })

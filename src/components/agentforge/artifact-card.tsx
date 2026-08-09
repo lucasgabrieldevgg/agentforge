@@ -11,7 +11,7 @@ import {
   FolderPlus,
   Copy,
   Check,
-  RefreshCw,
+  Code2,
 } from "lucide-react"
 import type { Artifact, WorkspaceFile } from "@/stores/project-store"
 import { useToast } from "@/hooks/use-toast"
@@ -110,11 +110,13 @@ const LANGUAGE_LABELS: Record<string, string> = {
 export function ArtifactCard({
   artifact,
   onAddToWorkspace,
+  onPreview,
 }: {
   artifact: Artifact
   onAddToWorkspace?: (file: Omit<WorkspaceFile, "id" | "createdAt" | "updatedAt">) => void
+  onPreview?: (artifact: Artifact) => void
 }) {
-  const [showPreview, setShowPreview] = useState(false)
+  const [showCode, setShowCode] = useState(false)
   const [copied, setCopied] = useState(false)
   const { toast } = useToast()
 
@@ -172,11 +174,26 @@ export function ArtifactCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 px-2 text-xs font-mono"
-            onClick={() => setShowPreview(!showPreview)}
+            className="h-7 px-2 text-xs font-mono text-primary"
+            onClick={() => {
+              if (onPreview) {
+                onPreview(artifact)
+              } else {
+                setShowCode(!showCode)
+              }
+            }}
           >
             <Eye className="w-3 h-3 mr-1" />
-            {showPreview ? "Ocultar" : "Preview"}
+            Preview
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs font-mono"
+            onClick={() => setShowCode(!showCode)}
+          >
+            <Code2 className="w-3 h-3 mr-1" />
+            {showCode ? "Ocultar" : "Código"}
           </Button>
           <Button
             size="sm"
@@ -210,7 +227,7 @@ export function ArtifactCard({
           </Button>
         </div>
       </div>
-      {showPreview && (
+      {showCode && (
         <pre className="p-3 text-xs font-mono whitespace-pre-wrap break-words text-muted-foreground bg-card/40 max-h-80 overflow-y-auto border-t border-primary/20">
           <code>{artifact.content}</code>
         </pre>
