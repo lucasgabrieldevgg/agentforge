@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
   Select,
@@ -43,6 +44,7 @@ import {
   Pencil,
   Globe,
   FileCode,
+  Cpu,
 } from "lucide-react"
 
 type ToolCall = {
@@ -113,6 +115,15 @@ export function ChatTab() {
     auto_trigger: boolean
     enabled: boolean
   }>>([])
+  const [apiModels, setApiModels] = useState<Array<{
+    id: string
+    name: string
+    contextLength: number
+    description: string
+    isFree: boolean
+  }>>([])
+  const [modelSearch, setModelSearch] = useState("")
+  const [showModelPicker, setShowModelPicker] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Load settings from active project (or defaults)
@@ -139,26 +150,50 @@ export function ChatTab() {
         if (d.skills) setSkills(d.skills)
       })
       .catch(() => {})
+    fetch("/api/models")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.models) setApiModels(d.models)
+      })
+      .catch(() => {})
 
     // Listen for "open project preview" event
     const openPreview = () => setShowProjectPreview(true)
     window.addEventListener("agentforge:open-project-preview", openPreview)
-    return () => window.removeEventListener("agentforge:open-project-preview", openPreview)
+
+    // Close model picker when clicking outside
+    const closeModelPicker = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest("[data-model-picker]")) {
+        setShowModelPicker(false)
+      }
+    }
+    document.addEventListener("click", closeModelPicker)
+
+    return () => {
+      window.removeEventListener("agentforge:open-project-preview", openPreview)
+      document.removeEventListener("click", closeModelPicker)
+    }
   }, [])
 
   useEffect(() => {
     if (transcript) setInput(transcript)
   }, [transcript])
 
-  const isNearBottomRef = useRef(true)
+  // Track if we should auto-scroll: true on new message, false when user scrolls up
+  const shouldAutoScrollRef = useRef(true)
+  const prevMsgCountRef = useRef(0)
 
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    // Only auto-scroll if user is near the bottom (within 150px)
-    // This lets users scroll up to read history without being yanked back down
-    if (isNearBottomRef.current) {
+    // Only auto-scroll if: user hasn't scrolled up, OR a new message was added (count increased)
+    const msgCount = messages.length
+    const isNewMessage = msgCount > prevMsgCountRef.current
+    prevMsgCountRef.current = msgCount
+    if (shouldAutoScrollRef.current || isNewMessage) {
       el.scrollTop = el.scrollHeight
+      shouldAutoScrollRef.current = true
     }
   }, [messages])
 
@@ -166,7 +201,12 @@ export function ChatTab() {
     const el = scrollRef.current
     if (!el) return
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
-    isNearBottomRef.current = distanceFromBottom < 150
+    // If user scrolled up (more than 100px from bottom), stop auto-scrolling
+    if (distanceFromBottom > 100) {
+      shouldAutoScrollRef.current = false
+    } else {
+      shouldAutoScrollRef.current = true
+    }
   }, [])
 
   const sendMessage = useCallback(
@@ -710,6 +750,86 @@ export function ChatTab() {
                 <Globe className="w-3 h-3 mr-1" />
                 Preview
               </Button>
+              {/* Model picker — searchable, fetched from user's OpenRouter API */}
+              <div className="relative" data-model-picker>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowModelPicker(!showModelPicker)}
+                  className="text-xs font-mono"
+                  title="Selecionar modelo"
+                >
+                  <Cpu className="w-3 h-3 mr-1" />
+                  <span className="max-w-[100px] truncate">{preferredModel.split("/").pop()}</span>
+                </Button>
+                {showModelPicker && (
+                  <div className="absolute bottom-full mb-2 left-0 w-80 max-w-[90vw] rounded-lg border border-border/60 bg-card/95 backdrop-blur-sm shadow-lg overflow-hidden z-50">
+                    <div className="p-2 border-b border-border/40">
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar modelo..."
+                          value={modelSearch}
+                          onChange={(e) => setModelSearch(e.target.value)}
+                          className="h-7 pl-7 text-xs font-mono"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {apiModels.length === 0 ? (
+                        <div className="p-3 text-xs text-muted-foreground font-mono text-center">
+                          Configure sua chave OpenRouter em API Keys
+                        </div>
+                      ) : (
+                        apiModels
+                          .filter((m) => {
+                            if (!modelSearch) return true
+                            const q = modelSearch.toLowerCase()
+                            return m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)
+                          })
+                          .slice(0, 100)
+                          .map((m) => (
+                            <button
+                              key={m.id}
+                              onClick={() => {
+                                changeModel(m.id)
+                                setShowModelPicker(false)
+                                setModelSearch("")
+                              }}
+                              className={`w-full text-left px-3 py-2 hover:bg-secondary/60 transition-colors ${
+                                preferredModel === m.id ? "bg-primary/10 border-l-2 border-primary" : ""
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {m.isFree && (
+                                  <span className="text-[9px] font-mono text-primary bg-primary/10 px-1 py-0.5 rounded border border-primary/20 shrink-0">
+                                    FREE
+                                  </span>
+                                )}
+                                <span className="text-xs font-mono font-medium truncate">{m.name}</span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] text-muted-foreground font-mono truncate">{m.id}</span>
+                                {m.contextLength > 0 && (
+                                  <span className="text-[9px] text-muted-foreground font-mono shrink-0">
+                                    {Math.round(m.contextLength / 1000)}K
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          ))
+                      )}
+                    </div>
+                    {apiModels.length > 0 && (
+                      <div className="p-2 border-t border-border/40 text-[10px] text-muted-foreground font-mono text-center">
+                        {apiModels.length} modelos disponíveis
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               <Button
                 type="button"
                 variant="ghost"
