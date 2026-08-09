@@ -180,6 +180,10 @@ export function Dashboard({ onExit }: { onExit: () => void }) {
               <p className="font-semibold text-foreground mb-1">Demo Mode</p>
               <p>Sem contas. Dados salvos no navegador. Baixe antes de limpar.</p>
             </div>
+            <div className="px-3 py-2 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-400/80 font-mono">
+              <p className="font-semibold mb-0.5">⚠️ Demo gratuita</p>
+              <p>Limite de 60s por resposta (Vercel Hobby). Código gerado é conciso por necessidade. Clone o repo pra rodar sem limite.</p>
+            </div>
           </div>
         </aside>
 

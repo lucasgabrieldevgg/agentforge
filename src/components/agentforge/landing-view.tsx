@@ -142,7 +142,10 @@ export function LandingView({ onEnter }: { onEnter: () => void }) {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground font-mono pt-2">
-            Stack: Next.js 16 · Prisma · Tailwind 4 · shadcn/ui · OpenRouter · Web Speech API
+            Stack: Next.js 16 · Prisma · Tailwind 4 · shadcn/ui · OpenRouter
+          </p>
+          <p className="text-[10px] text-amber-400/70 font-mono pt-1">
+            ⚠️ Demo gratuita: 60s de limite por resposta. Clone o repo pra rodar sem limite.
           </p>
         </div>
       </section>
