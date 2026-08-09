@@ -13,7 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { useSpeechRecognition, useSpeechSynthesis } from "@/hooks/use-speech"
 import { useProjectStore } from "@/stores/project-store"
 import { useAppStore } from "@/stores/app-store"
 import { ArtifactCard, extractArtifacts, stripCodeBlocks } from "@/components/agentforge/artifact-card"
@@ -21,15 +20,10 @@ import { ProjectPreview } from "@/components/agentforge/project-preview"
 import { SkillsMenu } from "@/components/agentforge/skills-menu"
 import {
   Send,
-  Mic,
-  MicOff,
-  Volume2,
-  VolumeX,
   Trash2,
   Wrench,
   Loader2,
   Sparkles,
-  AlertCircle,
   Brain,
   ChevronDown,
   ChevronRight,
@@ -95,7 +89,6 @@ export function ChatTab() {
 
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
-  const [voiceMode, setVoiceMode] = useState(false)
   const [models, setModels] = useState<Array<{
     id: string
     name: string
@@ -127,14 +120,9 @@ export function ChatTab() {
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Load settings from active project (or defaults)
-  const ttsEnabled = activeProject?.settings.ttsEnabled ?? true
   const thinkingLevel = activeProject?.settings.thinkingLevel ?? "quick"
   const deepResearchLevel = activeProject?.settings.deepResearchLevel ?? "high"
   const preferredModel = activeProject?.settings.model ?? "openai/gpt-oss-20b:free"
-
-  const { listening, transcript, interim, supported: sttSupported, start, stop } =
-    useSpeechRecognition("pt-BR")
-  const { speaking, supported: ttsSupported, speak, cancel } = useSpeechSynthesis()
 
   useEffect(() => {
     setHydrated(true)
@@ -175,10 +163,6 @@ export function ChatTab() {
       document.removeEventListener("click", closeModelPicker)
     }
   }, [])
-
-  useEffect(() => {
-    if (transcript) setInput(transcript)
-  }, [transcript])
 
   // Track if we should auto-scroll: true on new message, false when user scrolls up
   const shouldAutoScrollRef = useRef(true)
@@ -371,9 +355,6 @@ export function ChatTab() {
           })
         }
 
-        if (ttsEnabled && ttsSupported && fullReply && receivedDone) {
-          speak(fullReply)
-        }
       } catch (e) {
         updateMessage(projectId, aiMsgId, {
           content: `Erro: ${(e as Error).message}`,
@@ -388,41 +369,12 @@ export function ChatTab() {
         setLoading(false)
       }
     },
-    [loading, messages, ttsEnabled, ttsSupported, speak, toast, thinkingLevel, preferredModel, activeProjectId, addMessage, updateMessage, createProject]
+    [loading, messages, toast, thinkingLevel, preferredModel, activeProjectId, addMessage, updateMessage, createProject]
   )
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     sendMessage(input)
-  }
-
-  const handleMicClick = () => {
-    if (!sttSupported) {
-      toast({
-        title: "Navegador não suporta voz",
-        description: "Use Chrome/Edge para reconhecimento de fala.",
-        variant: "destructive",
-      })
-      return
-    }
-    if (listening) stop()
-    else start()
-  }
-
-  const handleVoiceModeToggle = () => {
-    if (!sttSupported) {
-      toast({ title: "Voz não suportada", description: "Use Chrome/Edge.", variant: "destructive" })
-      return
-    }
-    setVoiceMode((prev) => {
-      const next = !prev
-      if (next) {
-        toast({ title: "Modo voz ativo", description: "Fale quando o microfone acender." })
-      } else {
-        stop()
-      }
-      return next
-    })
   }
 
   const clearChat = () => {
@@ -474,13 +426,6 @@ export function ChatTab() {
     })
   }
 
-  const toggleTts = () => {
-    if (speaking) cancel()
-    if (activeProjectId) {
-      updateSettings(activeProjectId, { ttsEnabled: !ttsEnabled })
-    }
-  }
-
   if (!hydrated) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -527,23 +472,6 @@ export function ChatTab() {
 
   return (
     <div className="h-[calc(100vh-3.5rem)] flex flex-col">
-      {voiceMode && (
-        <div className="border-b border-primary/30 bg-primary/5 px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-primary">
-            <div className="w-2 h-2 rounded-full bg-primary voice-pulse" />
-            <span className="font-mono">Ouvindo…</span>
-            {interim && (
-              <span className="text-muted-foreground italic truncate max-w-md">
-                &ldquo;{interim}&rdquo;
-              </span>
-            )}
-          </div>
-          <Button variant="ghost" size="sm" onClick={handleVoiceModeToggle}>
-            Sair do modo voz
-          </Button>
-        </div>
-      )}
-
       <div className="flex-1 overflow-y-auto" ref={scrollRef} onScroll={handleScroll}>
         <div className="max-w-3xl mx-auto p-4 space-y-4">
           {messages.length === 0 && (
@@ -631,16 +559,6 @@ export function ChatTab() {
               }}
             />
             <Button
-              type="button"
-              size="icon"
-              variant={listening ? "default" : "outline"}
-              onClick={handleMicClick}
-              className={`shrink-0 ${listening ? "glow-primary" : ""}`}
-              title={listening ? "Parar" : "Falar"}
-            >
-              {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            </Button>
-            <Button
               type="submit"
               size="icon"
               disabled={loading || !input.trim()}
@@ -651,30 +569,6 @@ export function ChatTab() {
           </div>
           <div className="flex items-center justify-between text-xs gap-2 flex-wrap">
             <div className="flex items-center gap-1 flex-wrap">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleVoiceModeToggle}
-                className="text-xs font-mono"
-              >
-                {voiceMode ? (
-                  <span className="text-primary">● Modo voz ON</span>
-                ) : (
-                  "Modo voz OFF"
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={toggleTts}
-                className="text-xs font-mono"
-                title={ttsEnabled ? "Desativar fala" : "Ativar fala"}
-              >
-                {ttsEnabled ? <Volume2 className="w-3 h-3 mr-1" /> : <VolumeX className="w-3 h-3 mr-1" />}
-                {ttsEnabled ? "TTS ON" : "TTS OFF"}
-              </Button>
               <div className="flex items-center gap-1 px-2 py-1 rounded-md border border-border/40 bg-secondary/40">
                 <Brain className="w-3 h-3 text-primary shrink-0" />
                 <Select
@@ -845,12 +739,6 @@ export function ChatTab() {
               Enter envia · Shift+Enter quebra linha
             </p>
           </div>
-          {!sttSupported && (
-            <div className="flex items-center gap-2 text-xs text-amber-400 font-mono">
-              <AlertCircle className="w-3 h-3" />
-              Voz não suportada neste navegador (use Chrome/Edge).
-            </div>
-          )}
         </form>
       </div>
 

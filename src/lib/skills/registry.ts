@@ -18,7 +18,7 @@
 
 export type SkillParameter = {
   key: string
-  type: "string" | "number" | "boolean" | "enum"
+  type: "string" | "number" | "boolean"
   description: string
   required?: boolean
   default?: string | number | boolean
@@ -83,7 +83,7 @@ export const SKILLS: SkillSchema[] = [
     requires_consent: false,
     parameters: [
       { key: "text", type: "string", description: "Texto a resumir", required: true },
-      { key: "style", type: "enum", description: "Estilo do resumo", enum: ["bullets", "paragraph", "tldr"], default: "bullets", required: false },
+      { key: "style", type: "string", description: "Estilo do resumo", enum: ["bullets", "paragraph", "tldr"], default: "bullets", required: false },
     ],
     builtin: "summarize",
     version: "1.0.0",
@@ -105,7 +105,7 @@ export const SKILLS: SkillSchema[] = [
     requires_consent: false,
     parameters: [
       { key: "text", type: "string", description: "Texto a reescrever", required: true },
-      { key: "tone", type: "enum", description: "Tom desejado", enum: ["formal", "casual", "tecnico", "simples", "persuasivo"], default: "simples", required: false },
+      { key: "tone", type: "string", description: "Tom desejado", enum: ["formal", "casual", "tecnico", "simples", "persuasivo"], default: "simples", required: false },
     ],
     builtin: "rewrite",
     version: "1.0.0",
@@ -127,7 +127,7 @@ export const SKILLS: SkillSchema[] = [
     auto_trigger: true,
     requires_consent: false,
     parameters: [
-      { key: "action", type: "enum", description: "Ação", enum: ["write", "explain", "refactor", "debug"], default: "write", required: true },
+      { key: "action", type: "string", description: "Ação", enum: ["write", "explain", "refactor", "debug"], default: "write", required: true },
       { key: "language", type: "string", description: "Linguagem (ex: python, javascript, rust)", required: false, placeholder: "python" },
       { key: "prompt", type: "string", description: "O que fazer", required: true },
     ],
@@ -151,7 +151,7 @@ export const SKILLS: SkillSchema[] = [
     requires_consent: false,
     parameters: [
       { key: "topic", type: "string", description: "Conceito a explicar", required: true },
-      { key: "level", type: "enum", description: "Nível", enum: ["child", "student", "expert"], default: "student", required: false },
+      { key: "level", type: "string", description: "Nível", enum: ["child", "student", "expert"], default: "student", required: false },
     ],
     builtin: "explain",
     version: "1.0.0",
@@ -192,7 +192,7 @@ export const SKILLS: SkillSchema[] = [
     auto_trigger: true,
     requires_consent: false,
     parameters: [
-      { key: "action", type: "enum", description: "Ação", enum: ["add", "list", "done", "clear"], default: "list", required: true },
+      { key: "action", type: "string", description: "Ação", enum: ["add", "list", "done", "clear"], default: "list", required: true },
       { key: "task", type: "string", description: "Texto da tarefa (para add) ou número (para done)", required: false },
     ],
     builtin: "todo",
@@ -248,7 +248,7 @@ export const SKILLS: SkillSchema[] = [
     requires_consent: false,
     parameters: [
       { key: "text", type: "string", description: "Texto para hashear", required: true },
-      { key: "algorithm", type: "enum", description: "Algoritmo", enum: ["sha256", "sha1", "md5"], default: "sha256", required: false },
+      { key: "algorithm", type: "string", description: "Algoritmo", enum: ["sha256", "sha1", "md5"], default: "sha256", required: false },
     ],
     builtin: "hash",
     version: "1.0.0",
