@@ -253,6 +253,81 @@ export const SKILLS: SkillSchema[] = [
     builtin: "hash",
     version: "1.0.0",
   },
+  {
+    name: "color",
+    display_name: "Paleta de Cores",
+    description:
+      "Gera uma paleta de cores harmoniosa baseada em uma cor base. Útil para design e sites.",
+    long_description:
+      "Gera paleta de cores (complementar, análoga, triádica). Use /color [cor_base] tipo=[complementar|analog|triad].",
+    icon: "Palette",
+    category: "utility",
+    slash_command: "color",
+    aliases: ["cores", "palette"],
+    auto_trigger: false,
+    requires_consent: false,
+    parameters: [
+      { key: "base", type: "string", description: "Cor base (hex ex: #FF5733 ou nome ex: blue)", required: true },
+      { key: "type", type: "string", description: "Tipo de paleta", enum: ["complementar", "analog", "triad", "mono"], default: "complementar", required: false },
+    ],
+    builtin: "color",
+    version: "1.0.0",
+  },
+  {
+    name: "regex",
+    display_name: "Regex Helper",
+    description:
+      "Cria e explica expressões regulares. Use quando o usuário pedir ajuda com regex.",
+    long_description:
+      "Gera e explica regex. Use /regex [descrição do que quer matchear].",
+    icon: "Regex",
+    category: "dev",
+    slash_command: "regex",
+    auto_trigger: true,
+    requires_consent: false,
+    parameters: [
+      { key: "description", type: "string", description: "O que você quer que o regex matchee", required: true },
+    ],
+    builtin: "regex",
+    version: "1.0.0",
+  },
+  {
+    name: "time",
+    display_name: "Conversor de Tempo",
+    description:
+      "Converte entre fusos horários. Diga 'que horas em Tóquio' e ele converte.",
+    long_description:
+      "Converte horários entre fusos. Use /time [cidade] ou /time [hora] de=[cidade] para=[cidade].",
+    icon: "Clock",
+    category: "utility",
+    slash_command: "time",
+    aliases: ["fuso", "timezone"],
+    auto_trigger: true,
+    requires_consent: false,
+    parameters: [
+      { key: "city", type: "string", description: "Cidade para ver a hora atual", required: true },
+    ],
+    builtin: "time",
+    version: "1.0.0",
+  },
+  {
+    name: "ascii",
+    display_name: "ASCII Art",
+    description:
+      "Gera arte ASCII a partir de texto. Útil para criar banners ou decoração.",
+    long_description:
+      "Gera arte ASCII. Use /ascii [texto].",
+    icon: "Type",
+    category: "fun",
+    slash_command: "ascii",
+    auto_trigger: false,
+    requires_consent: false,
+    parameters: [
+      { key: "text", type: "string", description: "Texto para converter em ASCII", required: true },
+    ],
+    builtin: "ascii",
+    version: "1.0.0",
+  },
 ]
 
 export const SKILL_MAP: Record<string, SkillSchema> = Object.fromEntries(
