@@ -781,10 +781,10 @@ function MessageBubble({ m, onEdit, onResend }: { m: Msg; onEdit?: (id: string, 
     setEditing(false)
   }
 
-  const artifacts = m.role === "assistant" && !m.streaming && m.content ? extractArtifacts(m.content) : []
+  // Extract artifacts even during streaming (handles incomplete code blocks)
+  const artifacts = m.role === "assistant" && m.content ? extractArtifacts(m.content) : []
   // Show only narration text (code blocks stripped) in the message bubble
-  // During streaming, show the full content so user sees code being generated
-  const displayContent = m.role === "assistant" && !m.streaming && artifacts.length > 0
+  const displayContent = m.role === "assistant" && artifacts.length > 0
     ? stripCodeBlocks(m.content)
     : m.content
 
