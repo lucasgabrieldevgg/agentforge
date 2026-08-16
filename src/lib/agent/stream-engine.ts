@@ -563,10 +563,18 @@ Regra de ouro: se o código não couber no tempo que sobrou, SIMPLIFIQUE o desig
     // No tool_calls — this is the final answer
     finalReply = streamResult.content
 
-    // ── Continuation rescue: the model hit its token limit mid-answer (the
-    // silent "stopped in the middle" failure). If there is still time, ask it
-    // to continue EXACTLY where it stopped and stitch the parts together.
-    if (streamResult.finishReason === "length" && finalReply.trim() && remainingMs() > 12_000) {
+    // ── Continuation rescue: the answer was cut mid-generation. Two signals:
+    // 1. finish_reason === "length" — when the provider reports it
+    // 2. syntax heuristic — many providers never send finish_reason while
+    //    streaming, so detect an unterminated code block (``` opened but not
+    //    closed) or missing </html> in an HTML answer. That's the "partial
+    //    code delivered as complete → blank preview" failure.
+    const fenceCount = (finalReply.match(/```/g) || []).length
+    const hasUnterminatedCodeBlock =
+      fenceCount % 2 === 1 ||
+      (/```html\b/i.test(finalReply) && !/<\/html>/i.test(finalReply))
+    const wasCut = streamResult.finishReason === "length" || hasUnterminatedCodeBlock
+    if (wasCut && finalReply.trim() && remainingMs() > 12_000) {
       deliveredParts += finalReply
       messages.push({ role: "assistant", content: finalReply })
       messages.push({

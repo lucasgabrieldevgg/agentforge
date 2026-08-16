@@ -86,7 +86,7 @@ export function LandingView({ onEnter }: { onEnter: () => void }) {
             </div>
             <div>
               <h1 className="font-mono font-bold text-lg leading-none">AgentForge</h1>
-              <p className="text-[10px] text-muted-foreground font-mono">v0.21.0 — open source demo</p>
+              <p className="text-[10px] text-muted-foreground font-mono">v0.22.0 — open source demo</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

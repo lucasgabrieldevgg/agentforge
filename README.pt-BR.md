@@ -75,6 +75,19 @@ bun run dev
 
 Acesse http://localhost:3000. Dica: configure `DEMO_MODE=false` no `.env` pra remover o limite de 80 linhas da demo e gerar código maior, sem limite de tempo.
 
+## 🐳 Rodar com Docker (sem limites)
+
+```bash
+docker compose up --build
+```
+
+Abra http://localhost:3000 — só isso. O container sobe com `DEMO_MODE=false`
+automático: sem limite de 60s, sem teto de linhas de código, thinking e deep
+research Max completos, e o agente narrando cada passo enquanto trabalha. O
+banco SQLite fica num volume do Docker, então seus projetos sobrevivem a restarts.
+
+
+
 ## 🔑 Configuração
 
 ### Variáveis de ambiente

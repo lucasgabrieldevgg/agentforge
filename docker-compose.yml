@@ -1,0 +1,17 @@
+services:
+  agentforge:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DEMO_MODE=false
+      - DATABASE_URL=file:/app/prisma/dev.db
+      # Optional telemetry (your own bot):
+      # - TELEGRAM_BOT_TOKEN=
+      # - TELEGRAM_CHAT_ID=
+    volumes:
+      - agentforge_db:/app/prisma
+    restart: unless-stopped
+
+volumes:
+  agentforge_db:
