@@ -1,182 +1,142 @@
 # AgentForge
 
-> Open-source AI agent platform — build your personal Jarvis. Chat, voice, deep research, skills and tools, all in one app. Bring your own OpenRouter key.
+> Open-source AI agent platform — build your personal Jarvis.
 
-**Live demo:** https://agentforge-blue-zeta.vercel.app · **License:** MIT
-
-## ✨ Features
-
-- 🤖 **Multi-model chat** via OpenRouter (GPT, Gemini, DeepSeek, Llama, free models and more)
-- 🗣️ **Native voice** — speech-to-text and text-to-speech using the browser Web Speech API (no extra API key)
-- 🧠 **Thinking mode** — reasoning models show their thought process (GPT-OSS, Nemotron) plus synthetic chain-of-thought
-- 🔎 **Deep research** — multilingual Wikipedia research with 3 intensity levels
-- ⚡ **Skills** — slash commands like `/translate`, `/summarize`, `/code`, `/joke`
-- 🛠️ **Free built-in tools** — weather (Open-Meteo), exchange rates (Frankfurter), country data, calculator, unit converter, password generator
-- 🗂️ **Workspace** — conversations, projects, memory and integrations tabs
-- 🔑 **BYOK** — paste your own OpenRouter key in the UI (stored per user, masked on read)
-
-## 🚀 Stack
-
-Next.js (App Router) · TypeScript · Tailwind CSS + shadcn/ui · Prisma (SQLite in dev, Postgres/Supabase in prod) · Zustand · OpenRouter · Web Speech API
-
-## 📦 Quick start
-
-```bash
-git clone https://github.com/lucasgabrieldevgg/agentforge.git
-cd agentforge
-bun install          # or npm install
-cp .env.example .env # set DATABASE_URL
-bunx prisma db push
-bun run dev
-```
-
-Open http://localhost:3000, go to **Keys** and paste your OpenRouter key (get one at openrouter.ai/keys). Production deploys on Vercel with Supabase — see the deploy notes in `download/DEPLOY-SUPABASE.md`.
-
-## ⚠️ Demo mode
-
-This repository ships in **demo mode**: a single shared demo user with no login screen. Anyone visiting your deployment shares that user's settings and API keys — deploy it for personal use or behind your own auth.
-
----
-
-# 🇧🇷 Português (original)
-
-# AgentForge
-
-> Plataforma open source de agentes com IA — construa seu Jarvis particular.
->
-> **Demo ao vivo:** https://agentforge-blue-zeta.vercel.app
+> **Live demo:** https://agentforge-blue-zeta.vercel.app
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-6-indigo.svg)](https://www.prisma.io/)
 
-AgentForge é uma plataforma que transforma APIs gratuitas em ferramentas e skills para um agente inteligente. Você cola suas próprias chaves de API (OpenRouter, etc), o agente faz o resto — fala, pesquisa, executa. Roda até num celular velho.
+[Leia em Português](README.pt-BR.md)
+
+AgentForge turns free APIs into tools and skills for a smart agent. You paste your own API keys (OpenRouter, etc.) and the agent does the rest — it talks, researches and executes. It even runs on an old phone.
 
 ## ✨ Features
 
-- 🤖 **Agente com IA** — chat com LLM via OpenRouter (modelos gratuitos disponíveis)
-- 🎙️ **Voz nativa** — Web Speech API para STT e TTS (sem custo, sem API key)
-- 🧠 **Modo Pensamento** — suporta modelos com reasoning nativo (GPT-OSS, Nemotron Reasoning) + CoT sintético para os demais
-- 🔬 **Deep Research** — pesquisa aprofundada na Wikipedia multi-idioma (3 níveis: Quick / High / Max)
-- ✨ **Skills com /comandos** — estilo Slack/Discord: `/translate`, `/summarize`, `/code`, `/explain`, `/joke` e mais
-- 🔧 **Ferramentas plug-and-play** — clima, calculadora, cotação de moedas, países, conversor de unidades, gerador de senhas (todas grátis, sem chave)
-- 🎨 **Tema dark estilo Jarvis** — verde esmeralda com efeitos de glow e grid
+- 🤖 **AI agent** — LLM chat via OpenRouter (free models available)
+- 🎙️ **Native voice** — Web Speech API for STT and TTS (no cost, no API key)
+- 🧠 **Thinking mode** — supports models with native reasoning (GPT-OSS, Nemotron Reasoning) + synthetic chain-of-thought for the rest
+- 🔬 **Deep Research** — in-depth multilingual Wikipedia research (3 levels: Quick / High / Max)
+- ✨ **Skills with /commands** — Slack/Discord style: `/translate`, `/summarize`, `/code`, `/explain`, `/joke` and more
+- 🔧 **Plug-and-play tools** — weather, calculator, exchange rates, countries, unit converter, password generator (all free, no key)
+- 🎨 **Jarvis-style dark theme** — emerald green with glow and grid effects
 
 ## 🚀 Stack
 
 - **Framework:** Next.js 16 (App Router, Turbopack)
-- **Linguagem:** TypeScript 5
+- **Language:** TypeScript 5
 - **Styling:** Tailwind CSS 4 + shadcn/ui (New York)
-- **Database:** Prisma ORM (SQLite em dev, Postgres/Supabase em prod)
+- **Database:** Prisma ORM (SQLite in dev, Postgres/Supabase in prod)
 - **State:** Zustand
-- **LLM:** OpenRouter (multi-modelo)
-- **Voz:** Web Speech API (nativa do navegador)
-- **Telemetria (opcional):** Telegram Bot API
+- **LLM:** OpenRouter (multi-model)
+- **Voice:** Web Speech API (browser native)
+- **Telemetry (optional):** Telegram Bot API
 
-## 📦 Instalação local
+## 📦 Local installation
 
-### Pré-requisitos
+### Prerequisites
 
-- Node.js 18+ ou Bun
-- Uma chave gratuita da OpenRouter ([pegue aqui](https://openrouter.ai/keys))
+- Node.js 18+ or Bun
+- A free OpenRouter key ([get one here](https://openrouter.ai/keys))
 
-### Passo a passo
+### Step by step
 
 ```bash
-# 1. Clone o repositório
+# 1. Clone the repository
 git clone https://github.com/lucasgabrieldevgg/agentforge.git
 cd agentforge
 
-# 2. Instale as dependências
+# 2. Install dependencies
 bun install
-# ou: npm install
+# or: npm install
 
-# 3. Configure as variáveis de ambiente
+# 3. Set up environment variables
 cp .env.example .env
-# Edite o .env e adicione sua chave OpenRouter (opcional — pode fazer pelo UI também)
+# Edit .env and add your OpenRouter key (optional — you can also do it in the UI)
 
-# 4. Configure o banco de dados (SQLite local)
+# 4. Set up the database (local SQLite)
 bun run db:push
 
-# 5. Rode o servidor de desenvolvimento
+# 5. Run the development server
 bun run dev
 ```
 
-Acesse http://localhost:3000
+Open http://localhost:3000
 
-## 🔑 Configuração
+## 🔑 Configuration
 
-### Variáveis de ambiente
+### Environment variables
 
-Copie `.env.example` para `.env` e configure:
+Copy `.env.example` to `.env` and configure:
 
-| Variável | Obrigatório | Descrição |
-|----------|-------------|-----------|
-| `DATABASE_URL` | ✅ | String de conexão do banco (SQLite local ou Postgres/Supabase em prod) |
-| `DIRECT_DATABASE_URL` | ⚠️ | Apenas em prod com Supabase (session pooler para migrations) |
-| `TELEGRAM_BOT_TOKEN` | ❌ | Token do bot do Telegram para telemetria (opcional) |
-| `TELEGRAM_CHAT_ID` | ❌ | Chat ID para enviar telemetria (opcional) |
-| `CRON_SECRET` | ❌ | Secret para proteger o endpoint `/api/cron/daily` |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | ✅ | Database connection string (local SQLite or Postgres/Supabase in prod) |
+| `DIRECT_DATABASE_URL` | ⚠️ | Prod with Supabase only (session pooler for migrations) |
+| `TELEGRAM_BOT_TOKEN` | ❌ | Telegram bot token for telemetry (optional) |
+| `TELEGRAM_CHAT_ID` | ❌ | Chat ID to send telemetry to (optional) |
+| `CRON_SECRET` | ❌ | Secret to protect the `/api/cron/daily` endpoint |
 
-### Chaves de API do usuário
+### User API keys
 
-As chaves de API (OpenRouter, etc) são configuradas **pelo UI** na aba "API Keys". Elas ficam salvas no banco de dados. Cada usuário cola as suas.
+API keys (OpenRouter, etc.) are configured **through the UI** in the "API Keys" tab. They are stored in the database. Each user pastes their own.
 
-**Tutorial completo de como obter a chave OpenRouter** está dentro da aba API Keys no próprio app.
+**A full tutorial on how to get an OpenRouter key** is available inside the API Keys tab in the app itself.
 
-## 🎯 Como usar
+## 🎯 How to use
 
-### Chat básico
+### Basic chat
 
-1. Vá na aba **Agente**
-2. Digite uma mensagem e tecle Enter
-3. O agente responde usando o modelo selecionado
+1. Go to the **Agent** tab
+2. Type a message and hit Enter
+3. The agent replies using the selected model
 
-### Skills (comandos /)
+### Skills (/ commands)
 
-Ative skills na aba **Skills**, depois use no chat:
+Enable skills in the **Skills** tab, then use them in chat:
 
 ```
 /translate text="hello world" to=pt
-/summarize [cole um texto longo]
+/summarize [paste a long text]
 /code write python "fibonacci sequence"
 /explain quantum entanglement level=expert
 /joke
 /uuid count=5
 ```
 
-Skills com badge **AUTO** também podem ser invocadas automaticamente pela IA quando relevante.
+Skills with the **AUTO** badge can also be invoked automatically by the AI when relevant.
 
-### Ferramentas
+### Tools
 
-Ative ferramentas na aba **Ferramentas**. O agente as usa automaticamente quando precisa:
+Enable tools in the **Tools** tab. The agent uses them automatically when needed:
 
-- **Data & Hora** — sabe a hora atual
-- **Calculadora** — faz contas
-- **Wikipedia Multi-idioma** — busca conhecimento (PT/EN/ES/FR/DE/JA/ZH)
-- **Deep Research** — pesquisa aprofundada (3 níveis)
-- **Previsão do Tempo** (Open-Meteo, sem chave)
-- **Cotação de Moedas** (Frankfurter, sem chave)
-- **Dados de Países** (REST Countries, sem chave)
-- **Conversor de Unidades** (temperatura, comprimento, peso, etc)
-- **Gerador de Senhas** (cripto seguro)
+- **Date & Time** — knows the current time
+- **Calculator** — does the math
+- **Multilingual Wikipedia** — fetches knowledge (PT/EN/ES/FR/DE/JA/ZH)
+- **Deep Research** — in-depth research (3 levels)
+- **Weather forecast** (Open-Meteo, no key)
+- **Exchange rates** (Frankfurter, no key)
+- **Country data** (REST Countries, no key)
+- **Unit converter** (temperature, length, weight, etc.)
+- **Password generator** (crypto-secure)
 
-### Voz
+### Voice
 
-- Clique no 🎤 para falar (Chrome/Edge recomendado)
-- Ative "Modo voz" para escuta contínua
-- TTS (text-to-speech) ligado por padrão
+- Click the 🎤 to speak (Chrome/Edge recommended)
+- Enable "Voice mode" for continuous listening
+- TTS (text-to-speech) on by default
 
-### Modo Pensamento
+### Thinking mode
 
-- Ative "Thinking ON" no chat
-- Para modelos com reasoning nativo (GPT-OSS, Nemotron Reasoning): usa direto
-- Para outros modelos: injeta prompt de chain-of-thought
+- Toggle "Thinking ON" in chat
+- Models with native reasoning (GPT-OSS, Nemotron Reasoning): used directly
+- Other models: a chain-of-thought prompt is injected
 
-## 🚀 Deploy na Vercel
+## 🚀 Deploy to Vercel
 
-### Opção 1: CLI
+### Option 1: CLI
 
 ```bash
 npm i -g vercel
@@ -185,65 +145,69 @@ vercel link
 vercel --prod
 ```
 
-### Opção 2: Dashboard
+### Option 2: Dashboard
 
-1. Faça fork deste repositório
-2. Acesse https://vercel.com/new
-3. Importe o repositório
-4. Configure as variáveis de ambiente
+1. Fork this repository
+2. Go to https://vercel.com/new
+3. Import the repository
+4. Configure the environment variables
 5. Deploy
 
-### Banco de dados em produção
+### Production database
 
-Para produção, use **Supabase** (free tier 500MB):
+For production, use **Supabase** (500MB free tier):
 
-1. Crie conta em https://supabase.com
-2. Crie um novo projeto
-3. Vá em Settings → Database → Connection string → URI
-4. Configure no Vercel:
-   - `DATABASE_URL` = URI do transaction pooler (porta 6543, com `?pgbouncer=true`)
-   - `DIRECT_DATABASE_URL` = URI do session pooler (porta 5432)
-5. Rode `bunx prisma db push --schema=prisma/schema.prod.prisma` localmente com `DIRECT_DATABASE_URL` apontando pro Supabase
+1. Create an account at https://supabase.com
+2. Create a new project
+3. Go to Settings → Database → Connection string → URI
+4. Configure in Vercel:
+   - `DATABASE_URL` = transaction pooler URI (port 6543, with `?pgbouncer=true`)
+   - `DIRECT_DATABASE_URL` = session pooler URI (port 5432)
+5. Run `bunx prisma db push --schema=prisma/schema.prod.prisma` locally with `DIRECT_DATABASE_URL` pointing to Supabase
 
-## 📁 Estrutura do projeto
+## ⚠️ Demo mode
+
+This repository ships in **demo mode**: a single shared demo user with no login screen. Anyone visiting your deployment shares that user's settings and API keys — deploy it for personal use or behind your own auth.
+
+## 📁 Project structure
 
 ```
 agentforge/
 ├── prisma/
-│   ├── schema.prisma          # Schema SQLite (dev)
-│   └── schema.prod.prisma     # Schema Postgres (prod)
+│   ├── schema.prisma          # SQLite schema (dev)
+│   └── schema.prod.prisma     # Postgres schema (prod)
 ├── src/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── agent/chat/    # Endpoint do agente (LLM + tools + skills)
-│   │   │   ├── conversations/ # Histórico de conversas
-│   │   │   ├── cron/daily/    # Cron job diário
-│   │   │   ├── integrations/  # Toggle de ferramentas
-│   │   │   ├── keys/          # API keys do usuário
-│   │   │   ├── settings/      # Preferências (modelo, deep research level)
-│   │   │   └── skills/        # Toggle de skills
+│   │   │   ├── agent/chat/    # Agent endpoint (LLM + tools + skills)
+│   │   │   ├── conversations/ # Conversation history
+│   │   │   ├── cron/daily/    # Daily cron job
+│   │   │   ├── integrations/  # Tool toggles
+│   │   │   ├── keys/          # User API keys
+│   │   │   ├── settings/      # Preferences (model, deep research level)
+│   │   │   └── skills/        # Skill toggles
 │   │   ├── layout.tsx
 │   │   └── page.tsx
 │   ├── components/
 │   │   ├── agentforge/
-│   │   │   ├── tabs/          # Tabs do dashboard
+│   │   │   ├── tabs/          # Dashboard tabs
 │   │   │   ├── agent-forge.tsx
 │   │   │   ├── dashboard.tsx
 │   │   │   └── landing-view.tsx
 │   │   └── ui/                # shadcn/ui components
 │   ├── lib/
 │   │   ├── agent/
-│   │   │   └── engine.ts      # Orquestração do LLM + tools + skills + thinking
+│   │   │   └── engine.ts      # LLM + tools + skills + thinking orchestration
 │   │   ├── skills/
-│   │   │   ├── registry.ts    # Catálogo de skills
-│   │   │   └── executor.ts    # Executores de skills
+│   │   │   ├── registry.ts    # Skill catalog
+│   │   │   └── executor.ts    # Skill executors
 │   │   ├── tools/
-│   │   │   ├── registry.ts    # Catálogo de ferramentas
-│   │   │   └── executor.ts    # Executores de ferramentas
+│   │   │   ├── registry.ts    # Tool catalog
+│   │   │   └── executor.ts    # Tool executors
 │   │   ├── activity.ts
-│   │   ├── demo-user.ts       # Usuário demo (sem auth)
-│   │   ├── models.ts          # Catálogo de modelos OpenRouter
-│   │   ├── telemetry.ts       # Telemetria opcional (Telegram)
+│   │   ├── demo-user.ts       # Demo user (no auth)
+│   │   ├── models.ts          # OpenRouter model catalog
+│   │   ├── telemetry.ts       # Optional telemetry (Telegram)
 │   │   └── db.ts
 │   ├── hooks/
 │   │   ├── use-speech.ts      # Web Speech API (STT + TTS)
@@ -251,26 +215,26 @@ agentforge/
 │   └── stores/
 │       └── app-store.ts       # Zustand
 ├── scripts/
-│   └── vercel-build.sh        # Script de build da Vercel
-├── vercel.json                # Config da Vercel (cron jobs)
+│   └── vercel-build.sh        # Vercel build script
+├── vercel.json                # Vercel config (cron jobs)
 └── .env.example
 ```
 
-## 🤝 Contribuindo
+## 🤝 Contributing
 
-Contribuições são bem-vindas! Abra uma issue ou PR.
+Contributions are welcome! Open an issue or a PR.
 
 ## 📝 License
 
-MIT — veja [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
 
-## 🙏 Agradecimentos
+## 🙏 Acknowledgements
 
-- [OpenRouter](https://openrouter.ai/) — acesso a múltiplos LLMs
-- [Open-Meteo](https://open-meteo.com/) — clima gratuito sem chave
-- [Frankfurter](https://frankfurter.app/) — cotação de moedas gratuita
-- [REST Countries](https://restcountries.com/) — dados de países
-- [Wikipedia](https://www.wikipedia.org/) — conhecimento livre
-- [shadcn/ui](https://ui.shadcn.com/) — componentes lindos
-- [Vercel](https://vercel.com/) — hospedagem gratuita
-- [Supabase](https://supabase.com/) — banco gratuito
+- [OpenRouter](https://openrouter.ai/) — access to multiple LLMs
+- [Open-Meteo](https://open-meteo.com/) — free weather without a key
+- [Frankfurter](https://frankfurter.app/) — free exchange rates
+- [REST Countries](https://restcountries.com/) — country data
+- [Wikipedia](https://www.wikipedia.org/) — free knowledge
+- [shadcn/ui](https://ui.shadcn.com/) — beautiful components
+- [Vercel](https://vercel.com/) — free hosting
+- [Supabase](https://supabase.com/) — free database
