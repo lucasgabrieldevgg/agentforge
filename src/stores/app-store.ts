@@ -9,6 +9,7 @@ export type DashboardTab =
   | "skills"
   | "integrations"
   | "keys"
+  | "benchmark"
   | "memory"
 
 type AppState = {

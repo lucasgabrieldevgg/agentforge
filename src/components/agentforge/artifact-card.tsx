@@ -12,9 +12,11 @@ import {
   Copy,
   Check,
   Code2,
+  Play,
 } from "lucide-react"
 import type { Artifact, WorkspaceFile } from "@/stores/project-store"
 import { useToast } from "@/hooks/use-toast"
+import { PythonRunner } from "@/components/agentforge/python-runner"
 
 // Parse code blocks from markdown content
 // Handles BOTH complete (```...```) and incomplete (```... without closing) blocks
@@ -118,7 +120,9 @@ export function ArtifactCard({
 }) {
   const [showCode, setShowCode] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showRunner, setShowRunner] = useState(false)
   const { toast } = useToast()
+  const isPython = ["python", "py"].includes(artifact.language.toLowerCase())
 
   const handleDownload = () => {
     const blob = new Blob([artifact.content], { type: "text/plain;charset=utf-8" })
@@ -171,6 +175,18 @@ export function ArtifactCard({
           </span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          {isPython && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs font-mono text-emerald-400"
+              onClick={() => setShowRunner(true)}
+              title="Rodar no navegador (Pyodide)"
+            >
+              <Play className="w-3 h-3 mr-1" />
+              Rodar
+            </Button>
+          )}
           <Button
             size="sm"
             variant="ghost"
@@ -231,6 +247,14 @@ export function ArtifactCard({
         <pre className="p-3 text-xs font-mono whitespace-pre-wrap break-words text-muted-foreground bg-card/40 max-h-80 overflow-y-auto border-t border-primary/20">
           <code>{artifact.content}</code>
         </pre>
+      )}
+      {showRunner && (
+        <PythonRunner
+          open={showRunner}
+          onOpenChange={setShowRunner}
+          initialCode={artifact.content}
+          filename={artifact.filename}
+        />
       )}
     </div>
   )
