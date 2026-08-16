@@ -243,15 +243,19 @@ export async function runAgentStream(opts: {
   // ── Time budget manager (demo only) ─────────────────────────────────────
   // The Vercel Hobby function dies at 60s. We plan against a 55s deadline so
   // there is always room to persist the conversation and emit `done`.
+  // The deadline itself is the judge: generations run free and are only cut
+  // when the time is truly gone. Token budgets keep a generous floor because
+  // reasoning tokens share the same budget as content — starving them is what
+  // produced empty code artifacts.
   const DEMO_BUDGET_MS = 55_000
   const deadline = isDemoMode() ? Date.now() + DEMO_BUDGET_MS : 0
   const remainingMs = () => (deadline ? deadline - Date.now() : Number.POSITIVE_INFINITY)
-  // Conservative free-model throughput (~25 tok/s) → how many tokens fit in
-  // the time that is left.
   const tokensForRemaining = () => {
     if (!deadline) return 16000
     const sec = Math.max(0, Math.floor(remainingMs() / 1000))
-    return Math.max(300, Math.min(4000, sec * 25))
+    // ~40 tok/s is closer to real free-model throughput; the 1200 floor
+    // guarantees room for actual content even after reasoning tokens.
+    return Math.max(1200, Math.min(4000, sec * 40))
   }
   const TIME_OUT_NOTE =
     "\n\n⏱️ **Resposta encurtada** pra caber no limite de 60s da demo. Baixe/rode o projeto localmente pra respostas sem limite."
@@ -425,13 +429,15 @@ export async function runAgentStream(opts: {
       reasoningEffort,
       {
         maxTokens: tokensForRemaining(),
-        // Hard stop a bit before the deadline so partial content survives.
-        timeoutMs: deadline ? Math.max(3_000, remainingMs() - 5_000) : undefined,
+        // Hard stop just before the true deadline — this is the last-resort
+        // cut, not a prediction. Partial content survives it.
+        timeoutMs: deadline ? Math.max(3_000, remainingMs() - 3_000) : undefined,
       }
     )
 
-    // Generation was cut by our own time guard — deliver the partial answer.
-    if (streamResult.aborted && streamResult.content) {
+    // Generation was cut by the real deadline — deliver the partial answer
+    // (only when there is actual content worth delivering).
+    if (streamResult.aborted && streamResult.content.trim().length > 150) {
       finalReply = streamResult.content + TIME_OUT_NOTE
       onEvent("content", { chunk: TIME_OUT_NOTE })
       break
@@ -542,6 +548,12 @@ export async function runAgentStream(opts: {
     } else {
       const parsed = extractThinking(finalReply)
       finalReply = parsed.reply
+    }
+
+    // Empty generation (e.g. reasoning tokens ate the whole budget): retry
+    // while there is still comfortable time instead of delivering nothing.
+    if (!finalReply.trim() && remainingMs() > 15_000) {
+      continue
     }
     break
   }
