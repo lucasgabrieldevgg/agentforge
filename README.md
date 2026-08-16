@@ -17,6 +17,9 @@ AgentForge turns free APIs into tools and skills for a smart agent. You paste yo
 
 - 🤖 **AI agent** — LLM chat via OpenRouter (free models available)
 - 🌍 **Multilingual** — reply in the user's language (Auto) or force one of 8 languages
+- 🐍 **In-browser Python execution** — Python artifacts run client-side via Pyodide/WASM; send the output back to the agent to close the generate → run → fix loop
+- 📊 **Benchmark harness** — run a fixed battery of tasks through the real agent engine and score models on tool choice, answer correctness and latency
+- 📄 **Auto-save to workspace** — generated code is saved to the project workspace automatically (upsert by filename), with HTML preview and download
 - 🧠 **Thinking mode** — supports models with native reasoning (GPT-OSS, Nemotron Reasoning) + synthetic chain-of-thought for the rest
 - 🔬 **Deep Research** — in-depth multilingual Wikipedia research (3 levels: Quick / High / Max)
 - ✨ **Skills with /commands** — Slack/Discord style: `/translate`, `/summarize`, `/code`, `/explain`, `/joke` and more
@@ -168,6 +171,8 @@ For production, use **Supabase** (500MB free tier):
 ## ⚠️ Demo mode
 
 This repository ships in **demo mode**: a single shared demo user with no login screen. Anyone visiting your deployment shares that user's settings and API keys — deploy it for personal use or behind your own auth.
+
+The demo also runs against Vercel Hobby's 60-second function limit. A built-in **time budget manager** plans each answer against a 55s deadline: tools are dropped when time runs low, `max_tokens` scales to the time left, Max thinking/research levels are clamped to High, and if a generation still can't finish, whatever streamed is delivered with a "shortened by the demo limit" note instead of a hard cutoff. Set `DEMO_MODE=false` to disable all of it — self-hosted instances have no limits and get transparent step-by-step narration from the agent.
 
 ## 📁 Project structure
 

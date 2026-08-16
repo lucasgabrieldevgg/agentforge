@@ -185,7 +185,7 @@ export function Dashboard({ onExit }: { onExit: () => void }) {
             </div>
             <div className="px-3 py-2 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-400/80 font-mono">
               <p className="font-semibold mb-0.5">⚠️ Demo gratuita</p>
-              <p>Limite de 60s por resposta (Vercel Hobby). Código gerado é conciso por necessidade. Clone o repo pra rodar sem limite.</p>
+              <p>60s por resposta (Vercel Hobby) — o agente se adapta ao tempo disponível. Clone o repo pra rodar sem limite.</p>
             </div>
           </div>
         </aside>

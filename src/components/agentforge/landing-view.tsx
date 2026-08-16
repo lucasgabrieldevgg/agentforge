@@ -12,12 +12,16 @@ import {
   ShieldCheck,
   Code2,
   Sparkles,
+  Gauge,
+  Languages,
+  FolderOpen,
 } from "lucide-react"
 
 const FREE_APIS = [
   { name: "Vercel", desc: "Hospedagem + cron", limit: "100GB/mês" },
   { name: "Supabase", desc: "Banco + arquivos", limit: "500MB" },
   { name: "OpenRouter", desc: "LLM gratuito", limit: "Free tier" },
+  { name: "Pyodide (WASM)", desc: "Python no navegador", limit: "Grátis" },
   { name: "Open-Meteo", desc: "Clima", limit: "Grátis" },
   { name: "Frankfurter", desc: "Cotação de moedas", limit: "Grátis" },
 ]
@@ -26,32 +30,47 @@ const FEATURES = [
   {
     icon: Mic,
     title: "Executa código no navegador",
-    desc: "Artifacts Python rodam direto no seu browser (Pyodide/WASM): vê a saída, corrige, e manda o resultado de volta pro agente. Sem servidor, sem custo.",
+    desc: "Artifacts Python rodam direto no seu browser (Pyodide/WASM): vê a saída, corrige, e manda o resultado de volta pro agente fechar o loop gerar → rodar → corrigir.",
+  },
+  {
+    icon: Gauge,
+    title: "Benchmark de modelos",
+    desc: "Rode uma bateria de tarefas pelo motor real do agente e compare modelos: usou a ferramenta certa? respondeu certo? qual latência? Tudo medido no próprio site.",
+  },
+  {
+    icon: Brain,
+    title: "Thinking em 3 níveis",
+    desc: "Quick, High e Max. Suporta modelos com reasoning nativo (GPT-OSS, Nemotron) e injeta raciocínio sintético nos que não têm — mostrado em tempo real enquanto pensa.",
+  },
+  {
+    icon: Zap,
+    title: "Deep Research multi-idioma",
+    desc: "Pesquisa aprofundada na Wikipedia: Quick (1 idioma), High (3 + relacionados), Max (5 + 5 relacionados). O agente decide sozinho quando pesquisar.",
+  },
+  {
+    icon: Languages,
+    title: "Multilíngue",
+    desc: "No modo Auto, o agente responde no idioma em que você escrever — ou força um dos 8 idiomas suportados (PT-BR, EN, ES, FR, DE, IT, JA, ZH).",
+  },
+  {
+    icon: FolderOpen,
+    title: "Projetos & Workspace com auto-save",
+    desc: "Cada projeto tem mensagens, configurações e workspace próprios. Código gerado é salvo automaticamente no Workspace, com preview de HTML, execução de Python e download.",
   },
   {
     icon: Plug,
     title: "Ferramentas plug-and-play",
-    desc: "Ative ferramentas com 1 clique: clima, calculadora, Wikipedia, cotação de moedas, países, conversor de unidades, gerador de senhas. Todas grátis.",
+    desc: "Clima, calculadora, Wikipedia, cotação de moedas, países, conversor de unidades, gerador de senhas — todas grátis, sem chave, e cada uso aparece em tempo real no chat.",
   },
   {
     icon: Sparkles,
     title: "Skills com /comandos",
-    desc: "Sistema de skills estilo Slack/Discord: /translate, /summarize, /code, /explain, /joke e mais. A IA também pode invocar skills automaticamente.",
-  },
-  {
-    icon: Brain,
-    title: "Modo Pensamento",
-    desc: "Suporta modelos com reasoning nativo (GPT-OSS, Nemotron Reasoning). Detecta automaticamente e mostra o raciocínio em bloco colapsável.",
-  },
-  {
-    icon: Zap,
-    title: "Deep Research em 3 níveis",
-    desc: "Pesquisa aprofundada na Wikipedia multi-idioma. Quick (1 idioma), High (3 idiomas + relacionados), Max (5 idiomas + 5 relacionados).",
+    desc: "15 skills estilo Slack/Discord: /translate, /summarize, /code, /explain, /joke e mais. Digite / pra ver o menu — a IA também invoca skills sozinha quando faz sentido.",
   },
   {
     icon: Code2,
     title: "Open source no GitHub",
-    desc: "Suba no seu GitHub, faça fork, modifique. Construído com Next.js 16, Prisma, Tailwind 4 e shadcn/ui — stack moderna e documentada.",
+    desc: "Faça fork, modifique, rode no seu PC sem limite de tempo (DEMO_MODE=false). Next.js 16, Prisma, Tailwind 4, shadcn/ui — stack moderna e documentada.",
   },
 ]
 
@@ -67,7 +86,7 @@ export function LandingView({ onEnter }: { onEnter: () => void }) {
             </div>
             <div>
               <h1 className="font-mono font-bold text-lg leading-none">AgentForge</h1>
-              <p className="text-[10px] text-muted-foreground font-mono">v0.6.0 — open source demo</p>
+              <p className="text-[10px] text-muted-foreground font-mono">v0.20.0 — open source demo</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -144,7 +163,7 @@ export function LandingView({ onEnter }: { onEnter: () => void }) {
             Stack: Next.js 16 · Prisma · Tailwind 4 · shadcn/ui · OpenRouter
           </p>
           <p className="text-[10px] text-amber-400/70 font-mono pt-1">
-            ⚠️ Demo gratuita: 60s de limite por resposta. Clone o repo pra rodar sem limite.
+            ⚠️ Demo gratuita: 60s por resposta — o agente adapta thinking, ferramentas e tamanho do código ao tempo que tem. Clone o repo pra rodar sem limite.
           </p>
         </div>
       </section>
