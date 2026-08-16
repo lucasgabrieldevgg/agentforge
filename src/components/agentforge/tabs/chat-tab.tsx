@@ -38,6 +38,7 @@ import {
   Pencil,
   Globe,
   Languages,
+  Play,
   FileCode,
   Cpu,
 } from "lucide-react"
@@ -298,7 +299,7 @@ export function ChatTab() {
           content: m.content,
         })) as any
 
-        const res = await fetch("/api/agent/stream", {
+        let res = await fetch("/api/agent/stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -310,6 +311,31 @@ export function ChatTab() {
             model: preferredModel,
           }),
         })
+
+        // Queue: another visitor is generating — wait and re-send once.
+        if (res.status === 429) {
+          const err = await res.json().catch(() => ({}) as any)
+          if (err?.queued && err.retryInMs) {
+            const waitMs = Math.min(60_000, Number(err.retryInMs) + 1500)
+            toast({
+              title: "⏳ Fila — outra pessoa está usando a plataforma",
+              description: `Sua mensagem será enviada automaticamente em ~${Math.ceil(waitMs / 1000)}s.`,
+            })
+            await new Promise((r) => setTimeout(r, waitMs))
+            res = await fetch("/api/agent/stream", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                message: trimmed,
+                history,
+                thinkingLevel,
+                deepResearchLevel,
+                language,
+                model: preferredModel,
+              }),
+            })
+          }
+        }
 
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: "Erro no agente" }))
@@ -403,7 +429,9 @@ export function ChatTab() {
 
                   // Auto-save generated code to the project workspace (upsert by
                   // filename) so the user always iterates on the latest version.
-                  const savedArtifacts = extractArtifacts(fullReply || "")
+                  const savedArtifacts = extractArtifacts(fullReply || "").filter(
+                    (a) => a.content.trim().length >= 30
+                  )
                   if (savedArtifacts.length && projectId) {
                     const currentProject = useProjectStore
                       .getState()
@@ -629,6 +657,14 @@ export function ChatTab() {
             <MessageBubble
               key={m.id}
               m={m}
+              onContinue={() => {
+                // Fresh 60s round: ask the agent to resume exactly where the
+                // previous (shortened) answer stopped.
+                const tail = m.content.slice(-300)
+                sendMessage(
+                  `Continue EXATAMENTE de onde a sua resposta anterior parou. Não repita nada do que já escreveu, não reexplique — apenas retome no caractere seguinte. O final da sua resposta anterior foi:\n\n"""${tail}"""`
+                )
+              }}
               onEdit={(id, content) => {
                 if (activeProjectId) {
                   updateMessage(activeProjectId, id, { content })
@@ -906,11 +942,18 @@ export function ChatTab() {
   )
 }
 
-function MessageBubble({ m, onEdit, onResend }: { m: Msg; onEdit?: (id: string, content: string) => void; onResend?: (id: string) => void }) {
+function MessageBubble({ m, onEdit, onResend, onContinue }: { m: Msg; onEdit?: (id: string, content: string) => void; onResend?: (id: string) => void; onContinue?: () => void }) {
   const [copied, setCopied] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState(m.content)
   const { toast } = useToast()
+
+  // A shortened answer (demo time limit) offers one-click continuation in a
+  // fresh request with its own 60s budget.
+  const wasShortened =
+    m.role === "assistant" &&
+    !m.streaming &&
+    (m.content.includes("Resposta encurtada") || m.content.includes("O tempo da demo (60s) acabou"))
 
   const handleCopy = async () => {
     try {
@@ -1033,6 +1076,19 @@ function MessageBubble({ m, onEdit, onResend }: { m: Msg; onEdit?: (id: string, 
               />
             ))}
           </div>
+        )}
+
+        {wasShortened && onContinue && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-xs font-mono text-primary"
+            onClick={onContinue}
+            title="Continua a resposta em uma nova rodada com mais 60s"
+          >
+            <Play className="w-3 h-3 mr-1" />
+            Continuar (nova rodada de 60s)
+          </Button>
         )}
 
         {/* "Pesquisando..." indicator */}

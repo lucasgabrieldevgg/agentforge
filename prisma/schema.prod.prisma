@@ -111,3 +111,10 @@ model Conversation {
 
   @@index([userId, createdAt])
 }
+
+model Setting {
+  id        String   @id @default(cuid())
+  chave     String   @unique
+  valor     String
+  updatedAt DateTime @updatedAt
+}

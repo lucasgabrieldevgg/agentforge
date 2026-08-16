@@ -350,6 +350,8 @@ Regra de ouro: se o código não couber no tempo que sobrou, SIMPLIFIQUE o desig
   // Parts already delivered by previous rounds of a length-cut generation —
   // stitched together with the final round for the complete answer.
   let deliveredParts = ""
+  // Continuation rounds don't re-think: every token goes into content.
+  let isContinuation = false
 
   // ── Detect /skill invocation ──
   const slashMatch = userMessage.match(/^\/(\w+)\s*([\s\S]*)/)
@@ -449,9 +451,9 @@ Regra de ouro: se o código não couber no tempo que sobrou, SIMPLIFIQUE o desig
       openRouterKey,
       toolsForThisRound,
       onEvent,
-      reasoningEffort,
+      isContinuation ? undefined : reasoningEffort,
       {
-        maxTokens: tokensForRemaining(),
+        maxTokens: isContinuation ? 2000 : tokensForRemaining(),
         // Hard stop just before the true deadline — this is the last-resort
         // cut, not a prediction. Partial content survives it.
         timeoutMs: deadline ? Math.max(3_000, remainingMs() - 3_000) : undefined,
@@ -573,6 +575,7 @@ Regra de ouro: se o código não couber no tempo que sobrou, SIMPLIFIQUE o desig
           "Continue EXATAMENTE de onde você parou. Não repita nada do que já escreveu, não reexplique, não peça desculpas — apenas retome o texto/código no caractere seguinte ao último que você escreveu.",
       })
       onEvent("content", { chunk: "" })
+      isContinuation = true
       continue
     }
 
