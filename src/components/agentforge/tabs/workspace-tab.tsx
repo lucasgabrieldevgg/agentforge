@@ -17,9 +17,11 @@ import {
   Check,
   FileText,
   FolderOpen,
+  Play,
 } from "lucide-react"
 import { useProjectStore, type WorkspaceFile } from "@/stores/project-store"
 import { useToast } from "@/hooks/use-toast"
+import { PythonRunner } from "@/components/agentforge/python-runner"
 
 const LANGUAGE_ICONS: Record<string, typeof FileCode> = {
   javascript: FileCode,
@@ -49,6 +51,7 @@ export function WorkspaceTab() {
   const [newFileLang, setNewFileLang] = useState("text")
   const [editingFile, setEditingFile] = useState<WorkspaceFile | null>(null)
   const [previewFile, setPreviewFile] = useState<WorkspaceFile | null>(null)
+  const [runFile, setRunFile] = useState<WorkspaceFile | null>(null)
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const files = activeProject?.workspace || []
@@ -235,6 +238,17 @@ export function WorkspaceTab() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  {file.language?.toLowerCase() === "python" && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-emerald-400"
+                      onClick={() => setRunFile(file)}
+                      title="Rodar (Pyodide, no navegador)"
+                    >
+                      <Play className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
                   <Button
                     size="icon"
                     variant="ghost"
@@ -281,6 +295,16 @@ export function WorkspaceTab() {
             )
           })}
         </div>
+      )}
+
+      {/* Python runner modal */}
+      {runFile && (
+        <PythonRunner
+          open={!!runFile}
+          onOpenChange={(o) => !o && setRunFile(null)}
+          initialCode={runFile.content}
+          filename={runFile.name}
+        />
       )}
 
       {/* Preview modal */}

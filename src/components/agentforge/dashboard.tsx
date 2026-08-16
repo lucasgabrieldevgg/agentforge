@@ -16,6 +16,7 @@ import {
   FolderOpen,
   Download,
   Code2,
+  Gauge,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { ChatTab } from "@/components/agentforge/tabs/chat-tab"
@@ -25,6 +26,7 @@ import { SkillsTab } from "@/components/agentforge/tabs/skills-tab"
 import { IntegrationsTab } from "@/components/agentforge/tabs/integrations-tab"
 import { KeysTab } from "@/components/agentforge/tabs/keys-tab"
 import { MemoryTab } from "@/components/agentforge/tabs/memory-tab"
+import { BenchmarkTab } from "@/components/agentforge/tabs/benchmark-tab"
 import { useToast } from "@/hooks/use-toast"
 
 const TABS: { id: DashboardTab; label: string; icon: typeof MessageSquare }[] = [
@@ -34,6 +36,7 @@ const TABS: { id: DashboardTab; label: string; icon: typeof MessageSquare }[] = 
   { id: "skills", label: "Skills", icon: Sparkles },
   { id: "integrations", label: "Ferramentas", icon: Plug },
   { id: "keys", label: "API Keys", icon: KeyRound },
+  { id: "benchmark", label: "Benchmark", icon: Gauge },
   { id: "memory", label: "Memória", icon: Brain },
 ]
 
@@ -228,6 +231,7 @@ export function Dashboard({ onExit }: { onExit: () => void }) {
           {activeTab === "skills" && <SkillsTab />}
           {activeTab === "integrations" && <IntegrationsTab />}
           {activeTab === "keys" && <KeysTab />}
+          {activeTab === "benchmark" && <BenchmarkTab />}
           {activeTab === "memory" && <MemoryTab />}
         </main>
       </div>

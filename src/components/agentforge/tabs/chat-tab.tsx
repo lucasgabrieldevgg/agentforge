@@ -89,6 +89,17 @@ export function ChatTab() {
   }))
 
   const [input, setInput] = useState("")
+
+  // Python runner (and future harness components) can inject text into the
+  // chat input via window.dispatchEvent(new CustomEvent("agentforge:prefill"))
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail
+      if (detail) setInput((prev) => (prev ? prev + "\n" + detail : detail))
+    }
+    window.addEventListener("agentforge:prefill", handler)
+    return () => window.removeEventListener("agentforge:prefill", handler)
+  }, [])
   const [loading, setLoading] = useState(false)
   const [models, setModels] = useState<Array<{
     id: string
