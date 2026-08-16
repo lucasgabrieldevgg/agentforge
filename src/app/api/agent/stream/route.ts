@@ -44,6 +44,8 @@ export async function POST(req: Request) {
     history?: HistoryMsg[]
     model?: string
     thinkingLevel?: "quick" | "high" | "max"
+    deepResearchLevel?: "quick" | "high" | "max"
+    language?: string
   }
   try {
     body = await req.json()
@@ -102,6 +104,8 @@ export async function POST(req: Request) {
           history: (body.history || []).slice(-20),
           model: body.model,
           thinkingLevel: body.thinkingLevel,
+          deepResearchLevel: body.deepResearchLevel,
+          language: body.language,
           onEvent: send,
         })
 

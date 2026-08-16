@@ -16,7 +16,7 @@ AgentForge turns free APIs into tools and skills for a smart agent. You paste yo
 ## ✨ Features
 
 - 🤖 **AI agent** — LLM chat via OpenRouter (free models available)
-- 🎙️ **Native voice** — Web Speech API for STT and TTS (no cost, no API key)
+- 🌍 **Multilingual** — reply in the user's language (Auto) or force one of 8 languages
 - 🧠 **Thinking mode** — supports models with native reasoning (GPT-OSS, Nemotron Reasoning) + synthetic chain-of-thought for the rest
 - 🔬 **Deep Research** — in-depth multilingual Wikipedia research (3 levels: Quick / High / Max)
 - ✨ **Skills with /commands** — Slack/Discord style: `/translate`, `/summarize`, `/code`, `/explain`, `/joke` and more
@@ -31,7 +31,6 @@ AgentForge turns free APIs into tools and skills for a smart agent. You paste yo
 - **Database:** Prisma ORM (SQLite in dev, Postgres/Supabase in prod)
 - **State:** Zustand
 - **LLM:** OpenRouter (multi-model)
-- **Voice:** Web Speech API (browser native)
 - **Telemetry (optional):** Telegram Bot API
 
 ## 📦 Local installation
@@ -63,7 +62,7 @@ bun run db:push
 bun run dev
 ```
 
-Open http://localhost:3000
+Open http://localhost:3000. Tip: set `DEMO_MODE=false` in `.env` to remove the demo's 80-line code cap and generate longer code with no time limit.
 
 ## 🔑 Configuration
 
@@ -78,6 +77,7 @@ Copy `.env.example` to `.env` and configure:
 | `TELEGRAM_BOT_TOKEN` | ❌ | Telegram bot token for telemetry (optional) |
 | `TELEGRAM_CHAT_ID` | ❌ | Chat ID to send telemetry to (optional) |
 | `CRON_SECRET` | ❌ | Secret to protect the `/api/cron/daily` endpoint |
+| `DEMO_MODE` | ❌ | `true` by default — keeps generated code short so responses fit Vercel Hobby's 60s limit. Set to `false` when self-hosting to lift the cap and raise `max_tokens` |
 
 ### User API keys
 
@@ -122,11 +122,11 @@ Enable tools in the **Tools** tab. The agent uses them automatically when needed
 - **Unit converter** (temperature, length, weight, etc.)
 - **Password generator** (crypto-secure)
 
-### Voice
+### Language
 
-- Click the 🎤 to speak (Chrome/Edge recommended)
-- Enable "Voice mode" for continuous listening
-- TTS (text-to-speech) on by default
+A language selector sits next to the Think and Deep Research selectors in the chat toolbar.
+Pick **Auto** (default) and the agent replies in whatever language you write in, or force
+one of 8 languages (EN, PT-BR, ES, FR, DE, IT, JA, ZH). The choice is saved per project.
 
 ### Thinking mode
 
@@ -179,8 +179,7 @@ agentforge/
 ├── src/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── agent/chat/    # Agent endpoint (LLM + tools + skills)
-│   │   │   ├── conversations/ # Conversation history
+│   │   │   │   ├── conversations/ # Conversation history
 │   │   │   ├── cron/daily/    # Daily cron job
 │   │   │   ├── integrations/  # Tool toggles
 │   │   │   ├── keys/          # User API keys
@@ -210,7 +209,6 @@ agentforge/
 │   │   ├── telemetry.ts       # Optional telemetry (Telegram)
 │   │   └── db.ts
 │   ├── hooks/
-│   │   ├── use-speech.ts      # Web Speech API (STT + TTS)
 │   │   └── use-toast.ts
 │   └── stores/
 │       └── app-store.ts       # Zustand
