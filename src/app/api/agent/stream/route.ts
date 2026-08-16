@@ -64,6 +64,32 @@ export async function POST(req: Request) {
     })
   }
 
+  // ── Single-active-user lock (demo traffic guard) ─────────────────────────
+  // The demo shares one account and one API key: parallel generations would
+  // burn the key owner's quota and collide. One generation runs at a time;
+  // others get a queue position and an auto-retry hint.
+  const LOCK_KEY = "agent_lock_until"
+  const LOCK_TTL_MS = 58_000 // self-expires before the function limit
+  const now = Date.now()
+  const lockRow = await db.setting.findUnique({ where: { chave: LOCK_KEY } })
+  const lockUntil = lockRow ? Number(lockRow.valor) || 0 : 0
+  if (lockUntil > now) {
+    const retryInSec = Math.max(1, Math.ceil((lockUntil - now) / 1000))
+    return new Response(
+      JSON.stringify({
+        error: `Muitos usuários usando a plataforma ao mesmo tempo. Você foi colocado em fila — sua mensagem será reenviada em ~${retryInSec}s.`,
+        queued: true,
+        retryInMs: lockUntil - now,
+      }),
+      { status: 429, headers: { "Content-Type": "application/json" } }
+    )
+  }
+  await db.setting.upsert({
+    where: { chave: LOCK_KEY },
+    update: { valor: String(now + LOCK_TTL_MS) },
+    create: { chave: LOCK_KEY, valor: String(now + LOCK_TTL_MS) },
+  })
+
   void updateLastActive(userId)
 
   await db.conversation.create({
@@ -153,6 +179,10 @@ export async function POST(req: Request) {
       } finally {
         clearInterval(heartbeat)
         isClosed = true
+        // Release the single-active-user lock so the next person can run.
+        await db.setting
+          .update({ where: { chave: "agent_lock_until" }, data: { valor: "0" } })
+          .catch(() => {})
         try {
           controller.close()
         } catch {

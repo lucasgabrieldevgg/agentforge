@@ -105,3 +105,10 @@ model Conversation {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model Setting {
+  id        String   @id @default(cuid())
+  chave     String   @unique
+  valor     String
+  updatedAt DateTime @updatedAt
+}
