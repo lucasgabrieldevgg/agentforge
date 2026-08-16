@@ -185,10 +185,11 @@ Você não tem limite de tempo. Enquanto trabalha, NARRE brevemente o que está 
 
 O usuário acompanha seu trabalho em tempo real — como ver um agente pensando em voz alta.`
 
-function buildSystemPrompt(language: string): string {
+function buildSystemPrompt(language: string, budgetLine = ""): string {
   const parts = [SYSTEM_PROMPT_BASE, languageDirective(language)]
   if (isDemoMode()) parts.push(DEMO_CODE_LIMITS)
   else parts.push(SELF_HOSTED_NARRATION)
+  if (budgetLine) parts.push(budgetLine)
   return parts.join("\n\n")
 }
 
@@ -259,6 +260,25 @@ export async function runAgentStream(opts: {
   }
   const TIME_OUT_NOTE =
     "\n\n⏱️ **Resposta encurtada** pra caber no limite de 60s da demo. Baixe/rode o projeto localmente pra respostas sem limite."
+
+  // ── Phase budget plan: how the remaining time is split per level ────────
+  // Deterministic and told to the model, so it can calibrate how much it
+  // thinks, researches and writes. The deadline remains the final judge.
+  const budgetLine = (() => {
+    if (!deadline) return ""
+    const totalS = 52
+    const think = thinkingLevel === "quick" ? 4 : thinkingLevel === "high" ? 8 : 12
+    const research = (deepResearchLevel ?? "high") === "quick" ? 4 : (deepResearchLevel ?? "high") === "high" ? 8 : 12
+    const gen = Math.max(20, totalS - think - research)
+    return `### ⏱️ Seu orçamento de tempo (demo)
+
+Você tem ~${totalS}s no TOTAL, dividido assim:
+- 🧠 Pensar: no máximo ~${think}s (seja direto no raciocínio)
+- 🔍 Pesquisar: no máximo ~${research}s (1-2 ferramentas, sem aprofundar)
+- ✍️ Escrever a resposta/código: reserve pelo menos ~${gen}s
+
+Regra de ouro: se o código não couber no tempo que sobrou, SIMPLIFIQUE o design e entregue completo — NUNCA pare no meio de uma tag ou função.`
+  })()
   const thinkingEnabled = thinkingLevel !== "quick"
   const isMaxThinking = thinkingLevel === "max"
 
@@ -313,7 +333,7 @@ export async function runAgentStream(opts: {
   const useSyntheticCoT = thinkingEnabled && (!nativeThinking || isMaxThinking)
   const cotPrompt = isMaxThinking ? COT_PROMPT_MAX : COT_PROMPT_HIGH
   const languageValue = opts.language || "auto"
-  const basePrompt = buildSystemPrompt(languageValue)
+  const basePrompt = buildSystemPrompt(languageValue, budgetLine)
   const systemPrompt = useSyntheticCoT ? `${basePrompt}\n\n${cotPrompt}` : basePrompt
 
   // For models that support reasoning effort parameter (OpenRouter extension)
@@ -327,6 +347,9 @@ export async function runAgentStream(opts: {
   }> = []
   let lastNativeReasoning = ""
   let finalReply = ""
+  // Parts already delivered by previous rounds of a length-cut generation —
+  // stitched together with the final round for the complete answer.
+  let deliveredParts = ""
 
   // ── Detect /skill invocation ──
   const slashMatch = userMessage.match(/^\/(\w+)\s*([\s\S]*)/)
@@ -438,7 +461,7 @@ export async function runAgentStream(opts: {
     // Generation was cut by the real deadline — deliver the partial answer
     // (only when there is actual content worth delivering).
     if (streamResult.aborted && streamResult.content.trim().length > 150) {
-      finalReply = streamResult.content + TIME_OUT_NOTE
+      finalReply = deliveredParts + streamResult.content + TIME_OUT_NOTE
       onEvent("content", { chunk: TIME_OUT_NOTE })
       break
     }
@@ -538,6 +561,21 @@ export async function runAgentStream(opts: {
     // No tool_calls — this is the final answer
     finalReply = streamResult.content
 
+    // ── Continuation rescue: the model hit its token limit mid-answer (the
+    // silent "stopped in the middle" failure). If there is still time, ask it
+    // to continue EXACTLY where it stopped and stitch the parts together.
+    if (streamResult.finishReason === "length" && finalReply.trim() && remainingMs() > 12_000) {
+      deliveredParts += finalReply
+      messages.push({ role: "assistant", content: finalReply })
+      messages.push({
+        role: "user",
+        content:
+          "Continue EXATAMENTE de onde você parou. Não repita nada do que já escreveu, não reexplique, não peça desculpas — apenas retome o texto/código no caractere seguinte ao último que você escreveu.",
+      })
+      onEvent("content", { chunk: "" })
+      continue
+    }
+
     // Extract synthetic thinking if present
     if (thinkingEnabled && !nativeThinking) {
       const parsed = extractThinking(finalReply)
@@ -555,6 +593,7 @@ export async function runAgentStream(opts: {
     if (!finalReply.trim() && remainingMs() > 15_000) {
       continue
     }
+    finalReply = deliveredParts + finalReply
     break
   }
 
@@ -584,6 +623,7 @@ async function streamLLM(
   content: string
   reasoning: string
   toolCalls: Array<{ id: string; name: string; arguments: string }>
+  finishReason?: string | null
   aborted?: boolean
   error?: string
 }> {
@@ -596,9 +636,13 @@ async function streamLLM(
     temperature: 0.7,
     max_tokens: budget?.maxTokens ?? (isDemoMode() ? 4000 : 16000),
   }
-  // Add reasoning effort for models that support it (OpenRouter extension)
+  // Add reasoning effort for models that support it (OpenRouter extension).
+  // In demo, cap reasoning tokens so thinking can't devour the content budget
+  // (the "thought a lot, delivered empty code" failure).
   if (reasoningEffort) {
-    body.reasoning = { effort: reasoningEffort }
+    body.reasoning = isDemoMode()
+      ? { effort: reasoningEffort, max_tokens: 600 }
+      : { effort: reasoningEffort }
   }
 
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -630,6 +674,7 @@ async function streamLLM(
   let fullContent = ""
   let fullReasoning = ""
   let aborted = false
+  let finishReason: string | null = null
   // Tool calls come in chunks — we need to accumulate them by index
   const toolCallAccumulators: Map<number, { id: string; name: string; arguments: string }> = new Map()
 
@@ -649,7 +694,9 @@ async function streamLLM(
 
         try {
           const parsed = JSON.parse(data)
-          const delta = parsed.choices?.[0]?.delta
+          const choice = parsed.choices?.[0]
+          const delta = choice?.delta
+          if (choice?.finish_reason) finishReason = choice.finish_reason
           if (!delta) continue
 
           if (delta.content) {
@@ -691,7 +738,7 @@ async function streamLLM(
   }
 
   const toolCalls = aborted ? [] : Array.from(toolCallAccumulators.values()).filter((tc) => tc.name)
-  return { content: fullContent, reasoning: fullReasoning, toolCalls, aborted }
+  return { content: fullContent, reasoning: fullReasoning, toolCalls, aborted, finishReason }
 }
 
 // ── Helper: parse skill args ──

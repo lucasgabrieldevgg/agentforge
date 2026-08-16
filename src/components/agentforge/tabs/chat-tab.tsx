@@ -123,6 +123,8 @@ export function ChatTab() {
     recommended?: boolean
   }>>([])
   const [hydrated, setHydrated] = useState(false)
+  const [demoMode, setDemoMode] = useState(false)
+  const [deadlineLeft, setDeadlineLeft] = useState<number | null>(null)
   const [showProjectPreview, setShowProjectPreview] = useState(false)
   const [previewArtifacts, setPreviewArtifacts] = useState<Array<{
     id: string
@@ -163,6 +165,7 @@ export function ChatTab() {
       .then((r) => r.json())
       .then((d) => {
         if (d.models) setModels(d.models)
+        if (d.demoMode !== undefined) setDemoMode(Boolean(d.demoMode))
       })
       .catch(() => {})
     fetch("/api/skills")
@@ -213,6 +216,23 @@ export function ChatTab() {
 
   // Track if we should auto-scroll: true on new message, false when user scrolls up
   const shouldAutoScrollRef = useRef(true)
+
+  // Demo countdown: mirrors the server's 55s planning deadline while the
+  // agent works, so the user can see how much time is left.
+  useEffect(() => {
+    if (!loading || !demoMode) {
+      setDeadlineLeft(null)
+      return
+    }
+    const endsAt = Date.now() + 55_000
+    setDeadlineLeft(55)
+    const iv = setInterval(() => {
+      const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000))
+      setDeadlineLeft(left)
+      if (left <= 0) clearInterval(iv)
+    }, 1000)
+    return () => clearInterval(iv)
+  }, [loading, demoMode])
   const prevMsgCountRef = useRef(0)
 
   useEffect(() => {
@@ -845,8 +865,22 @@ export function ChatTab() {
                 Limpar
               </Button>
             </div>
-            <p className="text-muted-foreground font-mono hidden sm:block text-[10px]">
-              Enter envia · Shift+Enter quebra linha
+            <p className="text-muted-foreground font-mono hidden sm:block text-[10px] flex items-center gap-2">
+              <span>Enter envia · Shift+Enter quebra linha</span>
+              {deadlineLeft !== null && (
+                <span
+                  className={
+                    deadlineLeft <= 5
+                      ? "text-red-400 font-bold"
+                      : deadlineLeft <= 15
+                        ? "text-amber-400"
+                        : "text-primary"
+                  }
+                  title="Tempo restante do limite de 60s da demo (o agente se adapta a ele)"
+                >
+                  ⏱ {deadlineLeft}s
+                </span>
+              )}
             </p>
           </div>
         </form>
