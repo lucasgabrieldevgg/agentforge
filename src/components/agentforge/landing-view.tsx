@@ -18,7 +18,6 @@ const FREE_APIS = [
   { name: "Vercel", desc: "Hospedagem + cron", limit: "100GB/mês" },
   { name: "Supabase", desc: "Banco + arquivos", limit: "500MB" },
   { name: "OpenRouter", desc: "LLM gratuito", limit: "Free tier" },
-  { name: "Web Speech API", desc: "Voz nativa", limit: "Ilimitado" },
   { name: "Open-Meteo", desc: "Clima", limit: "Grátis" },
   { name: "Frankfurter", desc: "Cotação de moedas", limit: "Grátis" },
 ]
@@ -26,8 +25,8 @@ const FREE_APIS = [
 const FEATURES = [
   {
     icon: Mic,
-    title: "Voz nativa do navegador",
-    desc: "Usa a Web Speech API: fala e escuta direto no browser. Sem custo, sem API key. Perfeito pra um celular velho virar seu assistente.",
+    title: "Executa código no navegador",
+    desc: "Artifacts Python rodam direto no seu browser (Pyodide/WASM): vê a saída, corrige, e manda o resultado de volta pro agente. Sem servidor, sem custo.",
   },
   {
     icon: Plug,
@@ -113,8 +112,8 @@ export function LandingView({ onEnter }: { onEnter: () => void }) {
           </h2>
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             Uma plataforma que transforma APIs gratuitas em ferramentas e skills para um
-            agente inteligente. Você cola suas chaves, ele faz o resto — fala, pesquisa,
-            executa. Roda até num celular velho.
+            agente inteligente. Você cola suas chaves, ele faz o resto — pesquisa,
+            executa e cria. Roda até num celular velho.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
             <Button
