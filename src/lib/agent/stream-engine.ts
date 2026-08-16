@@ -636,13 +636,13 @@ async function streamLLM(
     temperature: 0.7,
     max_tokens: budget?.maxTokens ?? (isDemoMode() ? 4000 : 16000),
   }
-  // Add reasoning effort for models that support it (OpenRouter extension).
-  // In demo, cap reasoning tokens so thinking can't devour the content budget
-  // (the "thought a lot, delivered empty code" failure).
+  // Add reasoning controls for models that support them (OpenRouter
+  // extension). OpenRouter rejects effort + max_tokens together, so pick one:
+  // demo uses the hard token cap (thinking can't devour the content budget —
+  // the "thought a lot, delivered empty code" failure); self-hosted uses the
+  // effort level since there is no time pressure.
   if (reasoningEffort) {
-    body.reasoning = isDemoMode()
-      ? { effort: reasoningEffort, max_tokens: 600 }
-      : { effort: reasoningEffort }
+    body.reasoning = isDemoMode() ? { max_tokens: 600 } : { effort: reasoningEffort }
   }
 
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
