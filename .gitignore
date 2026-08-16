@@ -71,3 +71,4 @@ db/*.db
 
 # npm lockfile (this project uses bun)
 package-lock.json
+prisma/dev.db
