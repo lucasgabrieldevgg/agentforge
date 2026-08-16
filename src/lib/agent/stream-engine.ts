@@ -162,7 +162,7 @@ O código será extraído como arquivo anexo automaticamente. O usuário vê a n
 // limit, so long code gets cut mid-stream. Kept out of self-hosted instances.
 const DEMO_CODE_LIMITS = `### ⚠️ REGRAS OBRIGATÓRIAS — TEMPO LIMITADO! (modo demo)
 
-Você tem TEMPO LIMITADO pra responder. Se o código for muito longo, será CORTADO. Por isso:
+Você tem aproximadamente 60 SEGUNDOS no total — incluindo thinking e Deep Research. Se os modos Thinking/Deep Research Max estiverem ativos, reduza a profundidade sozinho pra caber no tempo. Se o código for muito longo, será CORTADO. Por isso:
 
 - **Narração de 1 linha.**
 - **Código MÁXIMO 80 LINHAS** — isso é CRÍTICO:
@@ -173,9 +173,22 @@ Você tem TEMPO LIMITADO pra responder. Se o código for muito longo, será CORT
   - CSS enxuto: 1 linha por regra quando possível
   - NUNCA corte no meio — se não couber em 80 linhas, simplifique o design`
 
+// Self-hosted instances have no time limit: the agent works transparently,
+// narrating each step while it works (tools, research, code structure).
+const SELF_HOSTED_NARRATION = `## 🎬 Transparência enquanto trabalha
+
+Você não tem limite de tempo. Enquanto trabalha, NARRE brevemente o que está fazendo:
+- Antes de usar uma ferramenta, diga em 1 linha o que vai buscar ("Vou pesquisar X na Wikipedia...")
+- Antes de gerar código, liste em 1-2 linhas a estrutura que pretende criar
+- Depois de cada passo relevante, comente o resultado em 1 linha
+- Seja conciso: narração curtinha, trabalho completo. Nada de parágrafos longos.
+
+O usuário acompanha seu trabalho em tempo real — como ver um agente pensando em voz alta.`
+
 function buildSystemPrompt(language: string): string {
   const parts = [SYSTEM_PROMPT_BASE, languageDirective(language)]
   if (isDemoMode()) parts.push(DEMO_CODE_LIMITS)
+  else parts.push(SELF_HOSTED_NARRATION)
   return parts.join("\n\n")
 }
 
@@ -219,7 +232,13 @@ export async function runAgentStream(opts: {
     ok: boolean
   }>
 }> {
-  const { userId, userMessage, history, model, thinkingLevel = "quick", deepResearchLevel, language, onEvent } = opts
+  const { userId, userMessage, history, model, onEvent } = opts
+  // In the hosted demo (60s function limit), Max levels risk running out of
+  // time mid-generation — clamp them to High. Self-hosted keeps full Max.
+  const thinkingLevel: "quick" | "high" | "max" =
+    isDemoMode() && opts.thinkingLevel === "max" ? "high" : (opts.thinkingLevel ?? "quick")
+  const deepResearchLevel: "quick" | "high" | "max" | undefined =
+    isDemoMode() && opts.deepResearchLevel === "max" ? "high" : opts.deepResearchLevel
   const thinkingEnabled = thinkingLevel !== "quick"
   const isMaxThinking = thinkingLevel === "max"
 
@@ -273,7 +292,7 @@ export async function runAgentStream(opts: {
   // - max: inject deep CoT for ALL models (even native ones get extra reasoning prompt)
   const useSyntheticCoT = thinkingEnabled && (!nativeThinking || isMaxThinking)
   const cotPrompt = isMaxThinking ? COT_PROMPT_MAX : COT_PROMPT_HIGH
-  const languageValue = language || "auto"
+  const languageValue = opts.language || "auto"
   const basePrompt = buildSystemPrompt(languageValue)
   const systemPrompt = useSyntheticCoT ? `${basePrompt}\n\n${cotPrompt}` : basePrompt
 

@@ -78,6 +78,8 @@ export function ChatTab() {
     clearMessages,
     updateSettings,
     createProject,
+    addWorkspaceFile,
+    updateWorkspaceFile,
   } = useProjectStore()
   const { setActiveTab } = useAppStore()
   const { toast } = useToast()
@@ -378,6 +380,40 @@ export function ChatTab() {
                     streaming: false,
                     toolCalls: finalToolCalls.map((tc) => ({ ...tc, status: "done" as const })),
                   })
+
+                  // Auto-save generated code to the project workspace (upsert by
+                  // filename) so the user always iterates on the latest version.
+                  const savedArtifacts = extractArtifacts(fullReply || "")
+                  if (savedArtifacts.length && projectId) {
+                    const currentProject = useProjectStore
+                      .getState()
+                      .projects.find((p) => p.id === projectId)
+                    for (const art of savedArtifacts) {
+                      const existing = currentProject?.workspace.find(
+                        (f) => f.name === art.filename
+                      )
+                      if (existing) {
+                        updateWorkspaceFile(projectId, existing.id, {
+                          content: art.content,
+                          language: art.language,
+                        })
+                      } else {
+                        addWorkspaceFile(projectId, {
+                          name: art.filename,
+                          path: art.filename,
+                          language: art.language,
+                          content: art.content,
+                        })
+                      }
+                    }
+                    toast({
+                      title:
+                        savedArtifacts.length === 1
+                          ? `📄 ${savedArtifacts[0].filename} salvo no Workspace`
+                          : `📄 ${savedArtifacts.length} arquivos salvos no Workspace`,
+                      description: "Abra a aba Workspace pra ver, editar, rodar ou baixar.",
+                    })
+                  }
                 } else if (currentEvent === "error") {
                   throw new Error(data.message)
                 }
@@ -715,23 +751,10 @@ export function ChatTab() {
                     <SelectItem value="it" className="text-xs font-mono">Italiano</SelectItem>
                     <SelectItem value="ja" className="text-xs font-mono">日本語</SelectItem>
                     <SelectItem value="zh" className="text-xs font-mono">中文</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent("agentforge:open-project-preview"))
-                }}
-                className="text-xs font-mono text-primary"
-                title="Ver preview do projeto"
-              >
-                <Globe className="w-3 h-3 mr-1" />
-                Preview
-              </Button>
-              {/* Model picker — searchable, fetched from user's OpenRouter API */}
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Model picker — searchable, fetched from user's OpenRouter API */}
               <div className="relative" data-model-picker>
                 <Button
                   type="button"
@@ -829,7 +852,8 @@ export function ChatTab() {
         </form>
       </div>
 
-      {/* Project Preview modal */}
+      {/* Project Preview modal — when opened from an artifact, preview ONLY that
+          file so the user always sees the latest version they just received */}
       {showProjectPreview && activeProject && (
         <ProjectPreview
           artifacts={previewArtifacts.length > 0
@@ -837,7 +861,7 @@ export function ChatTab() {
             : activeProject.messages
                 .filter((m) => m.role === "assistant" && m.content)
                 .flatMap((m) => extractArtifacts(m.content || ""))}
-          workspaceFiles={activeProject.workspace}
+          workspaceFiles={previewArtifacts.length > 0 ? [] : activeProject.workspace}
           onClose={() => {
             setShowProjectPreview(false)
             setPreviewArtifacts([])
