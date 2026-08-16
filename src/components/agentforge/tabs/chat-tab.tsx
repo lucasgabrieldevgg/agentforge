@@ -91,8 +91,19 @@ export function ChatTab() {
   const [input, setInput] = useState("")
 
   // Python runner (and future harness components) can inject text into the
-  // chat input via window.dispatchEvent(new CustomEvent("agentforge:prefill"))
+  // chat input via window.dispatchEvent(new CustomEvent("agentforge:prefill")).
+  // When the chat tab isn't mounted yet, the pending text is read from
+  // sessionStorage on mount.
   useEffect(() => {
+    try {
+      const pending = sessionStorage.getItem("agentforge:pendingPrefill")
+      if (pending) {
+        sessionStorage.removeItem("agentforge:pendingPrefill")
+        setInput((prev) => (prev ? prev + "\n" + pending : pending))
+      }
+    } catch {
+      // storage unavailable
+    }
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<string>).detail
       if (detail) setInput((prev) => (prev ? prev + "\n" + detail : detail))

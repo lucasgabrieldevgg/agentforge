@@ -100,6 +100,13 @@ export function PythonRunner({
   const sendToAgent = () => {
     if (!output) return
     const text = `Rodei o arquivo ${filename} no executor Python da plataforma. Saída:\n\`\`\`\n${output.slice(0, 4000)}\n\`\`\`\n`
+    // Persist so the chat tab can pick it up even when it's not mounted yet
+    // (the event only works when the chat is already on screen).
+    try {
+      sessionStorage.setItem("agentforge:pendingPrefill", text)
+    } catch {
+      // storage unavailable — the event below still covers the live case
+    }
     window.dispatchEvent(new CustomEvent("agentforge:prefill", { detail: text }))
     toast({
       title: "Saída enviada pro chat",
