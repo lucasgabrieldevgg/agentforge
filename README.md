@@ -1,5 +1,47 @@
 # AgentForge
 
+> Open-source AI agent platform — build your personal Jarvis. Chat, voice, deep research, skills and tools, all in one app. Bring your own OpenRouter key.
+
+**Live demo:** https://agentforge-blue-zeta.vercel.app · **License:** MIT
+
+## ✨ Features
+
+- 🤖 **Multi-model chat** via OpenRouter (GPT, Gemini, DeepSeek, Llama, free models and more)
+- 🗣️ **Native voice** — speech-to-text and text-to-speech using the browser Web Speech API (no extra API key)
+- 🧠 **Thinking mode** — reasoning models show their thought process (GPT-OSS, Nemotron) plus synthetic chain-of-thought
+- 🔎 **Deep research** — multilingual Wikipedia research with 3 intensity levels
+- ⚡ **Skills** — slash commands like `/translate`, `/summarize`, `/code`, `/joke`
+- 🛠️ **Free built-in tools** — weather (Open-Meteo), exchange rates (Frankfurter), country data, calculator, unit converter, password generator
+- 🗂️ **Workspace** — conversations, projects, memory and integrations tabs
+- 🔑 **BYOK** — paste your own OpenRouter key in the UI (stored per user, masked on read)
+
+## 🚀 Stack
+
+Next.js (App Router) · TypeScript · Tailwind CSS + shadcn/ui · Prisma (SQLite in dev, Postgres/Supabase in prod) · Zustand · OpenRouter · Web Speech API
+
+## 📦 Quick start
+
+```bash
+git clone https://github.com/lucasgabrieldevgg/agentforge.git
+cd agentforge
+bun install          # or npm install
+cp .env.example .env # set DATABASE_URL
+bunx prisma db push
+bun run dev
+```
+
+Open http://localhost:3000, go to **Keys** and paste your OpenRouter key (get one at openrouter.ai/keys). Production deploys on Vercel with Supabase — see the deploy notes in `download/DEPLOY-SUPABASE.md`.
+
+## ⚠️ Demo mode
+
+This repository ships in **demo mode**: a single shared demo user with no login screen. Anyone visiting your deployment shares that user's settings and API keys — deploy it for personal use or behind your own auth.
+
+---
+
+# 🇧🇷 Português (original)
+
+# AgentForge
+
 > Plataforma open source de agentes com IA — construa seu Jarvis particular.
 >
 > **Demo ao vivo:** https://agentforge-blue-zeta.vercel.app
