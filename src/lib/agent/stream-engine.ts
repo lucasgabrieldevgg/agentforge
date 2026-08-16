@@ -68,7 +68,30 @@ function extractThinking(content: string): { thinking: string; reply: string } {
   return { thinking: "", reply: content.trim() }
 }
 
-const SYSTEM_PROMPT = `Você é o AgentForge — um assistente pessoal inteligente e autônomo. 🤖
+// Demo deployments run on Vercel Hobby (60s function limit), so generated code
+// must stay short. Self-hosters set DEMO_MODE=false to lift the cap.
+const isDemoMode = () => process.env.DEMO_MODE !== "false"
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: "English",
+  pt: "Portuguese (Brazil)",
+  es: "Spanish",
+  fr: "French",
+  de: "German",
+  it: "Italian",
+  ja: "Japanese",
+  zh: "Chinese (Simplified)",
+}
+
+function languageDirective(language: string): string {
+  if (language === "auto") {
+    return "- 🌍 Idioma: responda SEMPRE no mesmo idioma em que o usuário escreveu."
+  }
+  const name = LANGUAGE_NAMES[language] || language
+  return `- 🌍 Idioma: responda SEMPRE em ${name}.`
+}
+
+const SYSTEM_PROMPT_BASE = `Você é o AgentForge — um assistente pessoal inteligente e autônomo. 🤖
 
 Você é autônomo: decide sozinho quando usar ferramentas, skills e pesquisas.
 
@@ -102,34 +125,22 @@ Seu raciocínio interno é capturado automaticamente pelo sistema. NÃO escreva 
 Simplesmente RESPONDA direto. O usuário não quer ver seu processo de pensamento.
 
 ### Para perguntas normais:
-Responda direto, em português, com emojis e formatação visual.
+Responda direto, com emojis e formatação visual.
 
 ### Para pedidos de CÓDIGO (site, script, função):
-
-**⚠️ REGRAS OBRIGATÓRIAS — TEMPO LIMITADO!**
-
-Você tem TEMPO LIMITADO pra responder. Se o código for muito longo, será CORTADO. Por isso:
 
 1. **Narração MUITO curta** (1-2 linhas MÁXIMO):
    \
    🍕 Site de pizzaria: header, menu, sobre, contato. HTML + CSS responsivo.
    \
 
-2. **Código MÁXIMO 80 LINHAS** — isso é CRÍTICO:
-   - Use CSS INLINE (style dentro do head, sem comentários)
-   - 3-4 seções apenas (header, 1 seção de conteúdo, footer)
-   - SEM JavaScript desnecessário (só se for essencial)
-   - SEM comentários no código
-   - CSS enxuto: 1 linha por regra quando possível
-   - NUNCA corte no meio — se não couber em 80 linhas, simplifique o design
-
-3. **Código no FINAL, num ÚNICO bloco:**
+2. **Código no FINAL, num ÚNICO bloco:**
    - Use \`\`\`html para HTML (CSS embutido)
    - NUNCA gere mais de um bloco
 
-4. **🚫 NÃO coloque código no texto** — só no bloco final.
+3. **🚫 NÃO coloque código no texto** — só no bloco final.
 
-5. **QUALIDADE em pouco espaço:**
+4. **QUALIDADE:**
    - CSS moderno: use variáveis CSS, flexbox
    - Cores harmoniosas (não use #FF0000 puro)
    - 1 imagem Unsplash no máximo (hero background)
@@ -141,12 +152,32 @@ O código será extraído como arquivo anexo automaticamente. O usuário vê a n
 - Emojis com moderação 🎯
 - **Negrito** pra destacar
 - Listas pra organizar
-- Português do Brasil 🇧🇷
 
 ## 🌍 Diretrizes
 - USE ferramentas proativamente
 - Se uma ferramenta falhar, explique
 - Seja conciso`
+
+// Demo-only constraints: the hosted demo runs on Vercel Hobby's 60s function
+// limit, so long code gets cut mid-stream. Kept out of self-hosted instances.
+const DEMO_CODE_LIMITS = `### ⚠️ REGRAS OBRIGATÓRIAS — TEMPO LIMITADO! (modo demo)
+
+Você tem TEMPO LIMITADO pra responder. Se o código for muito longo, será CORTADO. Por isso:
+
+- **Narração de 1 linha.**
+- **Código MÁXIMO 80 LINHAS** — isso é CRÍTICO:
+  - Use CSS INLINE (style dentro do head, sem comentários)
+  - 3-4 seções apenas (header, 1 seção de conteúdo, footer)
+  - SEM JavaScript desnecessário (só se for essencial)
+  - SEM comentários no código
+  - CSS enxuto: 1 linha por regra quando possível
+  - NUNCA corte no meio — se não couber em 80 linhas, simplifique o design`
+
+function buildSystemPrompt(language: string): string {
+  const parts = [SYSTEM_PROMPT_BASE, languageDirective(language)]
+  if (isDemoMode()) parts.push(DEMO_CODE_LIMITS)
+  return parts.join("\n\n")
+}
 
 function schemaToOpenRouter(schema: ToolSchema) {
   const properties: Record<string, unknown> = {}
@@ -173,6 +204,8 @@ export async function runAgentStream(opts: {
   history: OpenRouterMessage[]
   model?: string
   thinkingLevel?: "quick" | "high" | "max"
+  deepResearchLevel?: "quick" | "high" | "max"
+  language?: string
   onEvent: StreamCallback
 }): Promise<{
   reply: string
@@ -186,7 +219,7 @@ export async function runAgentStream(opts: {
     ok: boolean
   }>
 }> {
-  const { userId, userMessage, history, model, thinkingLevel = "quick", onEvent } = opts
+  const { userId, userMessage, history, model, thinkingLevel = "quick", deepResearchLevel, language, onEvent } = opts
   const thinkingEnabled = thinkingLevel !== "quick"
   const isMaxThinking = thinkingLevel === "max"
 
@@ -223,7 +256,7 @@ export async function runAgentStream(opts: {
   const ctx: ToolContext = {
     userId,
     userTimezone: "America/Cuiaba",
-    deepResearchLevel: (userRow?.deepResearchLevel || "high") as "quick" | "high" | "max",
+    deepResearchLevel: (deepResearchLevel || userRow?.deepResearchLevel || "high") as "quick" | "high" | "max",
     getApiKey: async (service) => {
       const row = await db.apiKey.findUnique({
         where: { userId_service: { userId, service } },
@@ -240,7 +273,9 @@ export async function runAgentStream(opts: {
   // - max: inject deep CoT for ALL models (even native ones get extra reasoning prompt)
   const useSyntheticCoT = thinkingEnabled && (!nativeThinking || isMaxThinking)
   const cotPrompt = isMaxThinking ? COT_PROMPT_MAX : COT_PROMPT_HIGH
-  const systemPrompt = useSyntheticCoT ? `${SYSTEM_PROMPT}\n\n${cotPrompt}` : SYSTEM_PROMPT
+  const languageValue = language || "auto"
+  const basePrompt = buildSystemPrompt(languageValue)
+  const systemPrompt = useSyntheticCoT ? `${basePrompt}\n\n${cotPrompt}` : basePrompt
 
   // For models that support reasoning effort parameter (OpenRouter extension)
   const reasoningEffort = thinkingLevel === "max" ? "high" : thinkingLevel === "high" ? "medium" : "low"
@@ -482,7 +517,7 @@ async function streamLLM(
     tools: tools.length ? tools : undefined,
     tool_choice: tools.length ? "auto" : undefined,
     temperature: 0.7,
-    max_tokens: 4000,
+    max_tokens: isDemoMode() ? 4000 : 16000,
   }
   // Add reasoning effort for models that support it (OpenRouter extension)
   if (reasoningEffort) {

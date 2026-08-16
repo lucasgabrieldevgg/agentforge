@@ -49,6 +49,7 @@ export type Project = {
     model?: string
     deepResearchLevel?: "quick" | "high" | "max"
     thinkingLevel?: "quick" | "high" | "max"
+    language?: string
     ttsEnabled?: boolean
   }
   workspace: WorkspaceFile[]

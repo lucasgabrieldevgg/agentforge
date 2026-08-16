@@ -68,3 +68,6 @@ download/
 # local artifacts
 .env
 db/*.db
+
+# npm lockfile (this project uses bun)
+package-lock.json

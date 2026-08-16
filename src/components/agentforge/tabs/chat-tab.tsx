@@ -37,6 +37,7 @@ import {
   Check,
   Pencil,
   Globe,
+  Languages,
   FileCode,
   Cpu,
 } from "lucide-react"
@@ -130,6 +131,7 @@ export function ChatTab() {
   const thinkingLevel = activeProject?.settings.thinkingLevel ?? "quick"
   const deepResearchLevel = activeProject?.settings.deepResearchLevel ?? "high"
   const preferredModel = activeProject?.settings.model ?? "openai/gpt-oss-20b:free"
+  const language = activeProject?.settings.language ?? "auto"
 
   useEffect(() => {
     setHydrated(true)
@@ -259,6 +261,8 @@ export function ChatTab() {
             message: trimmed,
             history,
             thinkingLevel,
+            deepResearchLevel,
+            language,
             model: preferredModel,
           }),
         })
@@ -429,6 +433,27 @@ export function ChatTab() {
       description: model
         ? `${model.hasNativeThinking ? "🧠 Tem thinking nativo. " : ""}Contexto: ${Math.round(model.contextLength / 1000)}K tokens.`
         : "Modelo customizado.",
+    })
+  }
+
+  const changeLanguage = (lang: string) => {
+    if (activeProjectId) {
+      updateSettings(activeProjectId, { language: lang })
+    }
+    const names: Record<string, string> = {
+      auto: "Auto (segue seu idioma)",
+      en: "English",
+      pt: "Português (BR)",
+      es: "Español",
+      fr: "Français",
+      de: "Deutsch",
+      it: "Italiano",
+      ja: "日本語",
+      zh: "中文",
+    }
+    toast({
+      title: "Idioma: " + names[lang],
+      description: lang === "auto" ? "O agente responde no idioma em que você escrever." : "O agente vai responder sempre nesse idioma.",
     })
   }
 
@@ -649,6 +674,25 @@ export function ChatTab() {
                         <span>Max</span>
                       </div>
                     </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-1 px-2 py-1 rounded-md border border-border/40 bg-secondary/40">
+                <Languages className="w-3 h-3 text-primary shrink-0" />
+                <Select value={language} onValueChange={changeLanguage}>
+                  <SelectTrigger className="h-6 w-[110px] text-xs font-mono border-0 bg-transparent p-0 focus:ring-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto" className="text-xs font-mono">🌐 Auto</SelectItem>
+                    <SelectItem value="en" className="text-xs font-mono">English</SelectItem>
+                    <SelectItem value="pt" className="text-xs font-mono">Português (BR)</SelectItem>
+                    <SelectItem value="es" className="text-xs font-mono">Español</SelectItem>
+                    <SelectItem value="fr" className="text-xs font-mono">Français</SelectItem>
+                    <SelectItem value="de" className="text-xs font-mono">Deutsch</SelectItem>
+                    <SelectItem value="it" className="text-xs font-mono">Italiano</SelectItem>
+                    <SelectItem value="ja" className="text-xs font-mono">日本語</SelectItem>
+                    <SelectItem value="zh" className="text-xs font-mono">中文</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
