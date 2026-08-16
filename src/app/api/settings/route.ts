@@ -16,6 +16,7 @@ export async function GET() {
   return NextResponse.json({
     deepResearchLevel: user?.deepResearchLevel || "high",
     preferredModel: user?.preferredModel || DEFAULT_MODEL,
+    demoMode: process.env.DEMO_MODE !== "false",
     models: RECOMMENDED_MODELS,
     levels: [
       { id: "quick", name: "Quick", description: "1 idioma (pt), sem artigos relacionados. ~1s.", icon: "Zap" },
