@@ -1,0 +1,9 @@
+node_modules
+.next
+.vercel
+.env
+dev.db
+prisma/dev.db
+prisma/custom.db
+*.log
+.git
