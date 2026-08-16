@@ -25,6 +25,9 @@ AgentForge é uma plataforma que transforma APIs gratuitas em ferramentas e skil
 
 - 🤖 **Agente com IA** — chat com LLM via OpenRouter (modelos gratuitos disponíveis)
 - 🌍 **Multi-idioma** — responde no idioma do usuário (Auto) ou força um dos 8 idiomas
+- 🐍 **Execução de Python no navegador** — artifacts Python rodam client-side via Pyodide/WASM; mande a saída de volta pro agente pra fechar o loop gerar → rodar → corrigir
+- 📊 **Benchmark harness** — rode uma bateria fixa de tarefas pelo motor real do agente e pontue modelos por uso de ferramenta, resposta correta e latência
+- 📄 **Auto-save no workspace** — código gerado é salvo automaticamente no workspace do projeto (upsert por nome), com preview de HTML e download
 - 🧠 **Modo Pensamento** — suporta modelos com reasoning nativo (GPT-OSS, Nemotron Reasoning) + CoT sintético para os demais
 - 🔬 **Deep Research** — pesquisa aprofundada na Wikipedia multi-idioma (3 níveis: Quick / High / Max)
 - ✨ **Skills com /comandos** — estilo Slack/Discord: `/translate`, `/summarize`, `/code`, `/explain`, `/joke` e mais
@@ -172,6 +175,12 @@ Para produção, use **Supabase** (free tier 500MB):
    - `DATABASE_URL` = URI do transaction pooler (porta 6543, com `?pgbouncer=true`)
    - `DIRECT_DATABASE_URL` = URI do session pooler (porta 5432)
 5. Rode `bunx prisma db push --schema=prisma/schema.prod.prisma` localmente com `DIRECT_DATABASE_URL` apontando pro Supabase
+
+## ⚠️ Modo demo
+
+Este repositório é distribuído em **modo demo**: um único usuário demo compartilhado, sem tela de login. Qualquer visitante do seu deploy compartilha as configurações e chaves desse usuário — use pessoal ou atrás da sua própria autenticação.
+
+A demo também roda contra o limite de 60 segundos de função do Vercel Hobby. Um **gerenciador de orçamento de tempo** planeja cada resposta contra um deadline de 55s: ferramentas são descartadas quando o tempo aperta, o `max_tokens` escala com o tempo restante, os níveis Max de thinking/research viram High, e se uma geração ainda assim não terminar, o que já foi transmitido é entregue com a nota "encurtada pelo limite da demo" em vez de um corte duro. Configure `DEMO_MODE=false` pra desativar tudo isso — instâncias self-hosted não têm limites e ganham narração passo a passo transparente do agente.
 
 ## 📁 Estrutura do projeto
 
