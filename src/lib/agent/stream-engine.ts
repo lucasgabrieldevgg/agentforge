@@ -239,6 +239,22 @@ export async function runAgentStream(opts: {
     isDemoMode() && opts.thinkingLevel === "max" ? "high" : (opts.thinkingLevel ?? "quick")
   const deepResearchLevel: "quick" | "high" | "max" | undefined =
     isDemoMode() && opts.deepResearchLevel === "max" ? "high" : opts.deepResearchLevel
+
+  // ── Time budget manager (demo only) ─────────────────────────────────────
+  // The Vercel Hobby function dies at 60s. We plan against a 55s deadline so
+  // there is always room to persist the conversation and emit `done`.
+  const DEMO_BUDGET_MS = 55_000
+  const deadline = isDemoMode() ? Date.now() + DEMO_BUDGET_MS : 0
+  const remainingMs = () => (deadline ? deadline - Date.now() : Number.POSITIVE_INFINITY)
+  // Conservative free-model throughput (~25 tok/s) → how many tokens fit in
+  // the time that is left.
+  const tokensForRemaining = () => {
+    if (!deadline) return 16000
+    const sec = Math.max(0, Math.floor(remainingMs() / 1000))
+    return Math.max(300, Math.min(4000, sec * 25))
+  }
+  const TIME_OUT_NOTE =
+    "\n\n⏱️ **Resposta encurtada** pra caber no limite de 60s da demo. Baixe/rode o projeto localmente pra respostas sem limite."
   const thinkingEnabled = thinkingLevel !== "quick"
   const isMaxThinking = thinkingLevel === "max"
 
@@ -383,15 +399,43 @@ export async function runAgentStream(opts: {
   ]
 
   for (let iter = 0; iter < 5; iter++) {
-    // Single streaming call WITH tools
+    // ── Budget gate: is there still time for another full generation? ──
+    if (remainingMs() < 10_000) {
+      // Deliver whatever we already have; if nothing, explain gracefully
+      // instead of dying to the platform's hard 60s cutoff.
+      if (!finalReply) {
+        finalReply =
+          "⏱️ O tempo da demo (60s) acabou antes de eu conseguir responder completely. Tente um pedido mais simples, ou baixe o projeto pra rodar sem limite." +
+          TIME_OUT_NOTE
+        onEvent("content", { chunk: finalReply })
+      }
+      break
+    }
+
+    // Scenario management: tools invite another generation round-trip — only
+    // offer them while there is comfortable time left.
+    const toolsForThisRound = remainingMs() > 30_000 ? allTools : []
+
     const streamResult = await streamLLM(
       messages,
       selectedModel,
       openRouterKey,
-      allTools,
+      toolsForThisRound,
       onEvent,
-      reasoningEffort
+      reasoningEffort,
+      {
+        maxTokens: tokensForRemaining(),
+        // Hard stop a bit before the deadline so partial content survives.
+        timeoutMs: deadline ? Math.max(3_000, remainingMs() - 5_000) : undefined,
+      }
     )
+
+    // Generation was cut by our own time guard — deliver the partial answer.
+    if (streamResult.aborted && streamResult.content) {
+      finalReply = streamResult.content + TIME_OUT_NOTE
+      onEvent("content", { chunk: TIME_OUT_NOTE })
+      break
+    }
 
     if (streamResult.error) {
       return {
@@ -522,11 +566,13 @@ async function streamLLM(
   apiKey: string,
   tools: unknown[],
   onEvent: StreamCallback,
-  reasoningEffort?: "low" | "medium" | "high"
+  reasoningEffort?: "low" | "medium" | "high",
+  budget?: { maxTokens?: number; timeoutMs?: number }
 ): Promise<{
   content: string
   reasoning: string
   toolCalls: Array<{ id: string; name: string; arguments: string }>
+  aborted?: boolean
   error?: string
 }> {
   const body: Record<string, unknown> = {
@@ -536,7 +582,7 @@ async function streamLLM(
     tools: tools.length ? tools : undefined,
     tool_choice: tools.length ? "auto" : undefined,
     temperature: 0.7,
-    max_tokens: isDemoMode() ? 4000 : 16000,
+    max_tokens: budget?.maxTokens ?? (isDemoMode() ? 4000 : 16000),
   }
   // Add reasoning effort for models that support it (OpenRouter extension)
   if (reasoningEffort) {
@@ -552,6 +598,9 @@ async function streamLLM(
       "X-Title": "AgentForge",
     },
     body: JSON.stringify(body),
+    // Time guard: abort slightly before the budget ends so whatever has
+    // streamed so far can still be delivered to the user.
+    signal: budget?.timeoutMs ? AbortSignal.timeout(budget.timeoutMs) : undefined,
   })
 
   if (!res.ok) {
@@ -568,6 +617,7 @@ async function streamLLM(
   let buffer = ""
   let fullContent = ""
   let fullReasoning = ""
+  let aborted = false
   // Tool calls come in chunks — we need to accumulate them by index
   const toolCallAccumulators: Map<number, { id: string; name: string; arguments: string }> = new Map()
 
@@ -620,12 +670,16 @@ async function streamLLM(
         }
       }
     }
+  } catch {
+    // Our own AbortSignal fired (or the connection dropped): salvage whatever
+    // streamed so far instead of losing the whole answer.
+    aborted = true
   } finally {
     reader.releaseLock?.()
   }
 
-  const toolCalls = Array.from(toolCallAccumulators.values()).filter((tc) => tc.name)
-  return { content: fullContent, reasoning: fullReasoning, toolCalls }
+  const toolCalls = aborted ? [] : Array.from(toolCallAccumulators.values()).filter((tc) => tc.name)
+  return { content: fullContent, reasoning: fullReasoning, toolCalls, aborted }
 }
 
 // ── Helper: parse skill args ──
