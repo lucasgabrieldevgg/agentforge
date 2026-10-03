@@ -6,6 +6,20 @@
 
 [Read in English](README.md)
 
+[![ci](https://github.com/lucasgabrieldevgg/agentforge/actions/workflows/ci.yml/badge.svg)](https://github.com/lucasgabrieldevgg/agentforge/actions/workflows/ci.yml)
+
+## 🧪 Desenvolvimento & testes
+
+```
+bun install && bunx prisma generate && bun run lint && bun run build
+```
+
+O CI roda o pipeline completo a cada push (lockfile congelado → cliente Prisma → ESLint → build do Next como smoke real + passo de higiene contra segredos).
+
+## 🎨 Identidade — FORJA (operação CRA)
+
+Nada de fonte-default-de-template (Geist/Inter): **IBM Plex Sans + IBM Plex Mono** — tipografia de engenharia pra uma plataforma de engenharia. A paleta verde-Jarvis declarada fica (é a identidade); saíram: glows radiais nos cantos, brilhos difusos em botões/textos (viraram arestas crisp de forja), headers de vidro. O grid blueprint fica — é a prancheta da casa.
+
 ---
 
 # AgentForge

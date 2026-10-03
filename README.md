@@ -4,12 +4,25 @@
 
 > **Live demo:** https://agentforge-blue-zeta.vercel.app
 
+[![ci](https://github.com/lucasgabrieldevgg/agentforge/actions/workflows/ci.yml/badge.svg)](https://github.com/lucasgabrieldevgg/agentforge/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-6-indigo.svg)](https://www.prisma.io/)
 
 [Leia em Português](README.pt-BR.md)
+
+## 🧪 Development & tests
+
+```
+bun install && bunx prisma generate && bun run lint && bun run build
+```
+
+CI runs the full pipeline on every push (frozen lockfile → Prisma client → ESLint → Next build as a real smoke test + a secret-scan hygiene step).
+
+## 🎨 Identity — FORJA (operação CRA)
+
+No default-template fonts (Geist/Inter): **IBM Plex Sans + IBM Plex Mono** — engineering typography for an engineering platform. The declared Jarvis-green palette stays (it *is* the identity); what left: corner glow gradients, diffused button/text glows (now crisp forge edges), glass headers. The blueprint grid texture stays — it's the house drawing board.
 
 AgentForge turns free APIs into tools and skills for a smart agent. You paste your own API keys (OpenRouter, etc.) and the agent does the rest — it talks, researches and executes. It even runs on an old phone.
 

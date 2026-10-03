@@ -53,6 +53,7 @@ server.log
 
 # agent-browser / tooling
 tool-results/
+upload/
 
 # sandbox scaffolding (não pertence ao projeto)
 /skills

@@ -8,7 +8,7 @@
 
 set -e
 
-echo "=== Vercel Build: AgentForge v0.5.0 ==="
+echo "=== Vercel Build: AgentForge v0.22.1 ==="
 
 echo "[1/2] Generating Prisma client (prod schema)..."
 bunx prisma generate --schema=prisma/schema.prod.prisma

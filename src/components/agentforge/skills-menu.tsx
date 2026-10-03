@@ -22,24 +22,22 @@ export function SkillsMenu({
   onPick: (command: string) => void
   skills: SkillInfo[]
 }) {
-  const [show, setShow] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [resetKey, setResetKey] = useState("")
+  const [dismissedFor, setDismissedFor] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Detect if input starts with / and is a single word (no space yet)
   const slashMatch = input.match(/^\/(\w*)$/)
-
-  useEffect(() => {
-    if (slashMatch) {
-      setShow(true)
-      setSelectedIndex(0)
-    } else {
-      setShow(false)
-    }
-  }, [slashMatch?.[1]])
-
-  // Filter skills based on what user typed after /
   const query = slashMatch?.[1]?.toLowerCase() || ""
+  const show = !!slashMatch && dismissedFor !== query
+
+  // CRA: `show` é derivado (era estado + useEffect). O reset da seleção usa
+  // o padrão oficial "adjust state during render" — sem efeito, lint feliz.
+  if (show && resetKey !== query) {
+    setResetKey(query)
+    setSelectedIndex(0)
+  }
   const filtered = skills
     .filter((s) => s.enabled)
     .filter((s) => {
@@ -66,7 +64,7 @@ export function SkillsMenu({
         e.stopPropagation()
         onPick(filtered[selectedIndex].slash_command)
       } else if (e.key === "Escape") {
-        setShow(false)
+        setDismissedFor(query)
       }
     }
     window.addEventListener("keydown", handler, true)

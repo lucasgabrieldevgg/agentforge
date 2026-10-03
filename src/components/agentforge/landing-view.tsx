@@ -78,7 +78,7 @@ export function LandingView({ onEnter }: { onEnter: () => void }) {
   return (
     <div className="min-h-screen flex flex-col jarvis-grid">
       {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-40 bg-background/80">
+      <header className="border-b border-border/50 sticky top-0 z-40 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-md bg-primary/10 border border-primary/30 flex items-center justify-center glow-primary">
@@ -86,7 +86,7 @@ export function LandingView({ onEnter }: { onEnter: () => void }) {
             </div>
             <div>
               <h1 className="font-mono font-bold text-lg leading-none">AgentForge</h1>
-              <p className="text-[10px] text-muted-foreground font-mono">v0.22.0 — open source demo</p>
+              <p className="text-[10px] text-muted-foreground font-mono">v0.22.1 — open source demo</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -182,7 +182,7 @@ export function LandingView({ onEnter }: { onEnter: () => void }) {
             {FREE_APIS.map((api) => (
               <div
                 key={api.name}
-                className="p-4 rounded-lg border border-border/60 bg-card/50 backdrop-blur-sm hover:border-primary/40 transition-colors"
+                className="p-4 rounded-lg border border-border/60 bg-card hover:border-primary/40 transition-colors"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>

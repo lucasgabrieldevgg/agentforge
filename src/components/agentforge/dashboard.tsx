@@ -91,7 +91,7 @@ export function Dashboard({ onExit }: { onExit: () => void }) {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top bar */}
-      <header className="border-b border-border/50 backdrop-blur-sm bg-background/80 sticky top-0 z-40">
+      <header className="border-b border-border/50 bg-background sticky top-0 z-40">
         <div className="h-14 px-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <button

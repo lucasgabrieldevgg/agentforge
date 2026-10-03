@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Instala dependências (lockfile congelado)
+        run: bun install --frozen-lockfile
+
+      - name: Gera cliente Prisma (schema dev = SQLite)
+        run: bunx prisma generate
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Build (smoke real do Next)
+        run: bun run build
+
+      - name: higiene CRA
+        run: |
+          if grep -rEn "sk-or-v1-[A-Za-z0-9]{10}|nvai_[A-Za-z0-9]{10}" src/ prisma/; then echo "segredo real exposto"; exit 1; fi
+          grep -q "IBM Plex" src/app/layout.tsx
+          if grep -q "radial-gradient" src/app/globals.css; then echo "glow delator"; exit 1; fi

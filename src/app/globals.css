@@ -6,8 +6,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-plex-sans);
+  --font-mono: var(--font-plex-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -107,10 +107,9 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image:
-      radial-gradient(circle at 0% 0%, oklch(0.18 0.04 158 / 0.18) 0%, transparent 35%),
-      radial-gradient(circle at 100% 100%, oklch(0.18 0.03 200 / 0.12) 0%, transparent 35%);
-    background-attachment: fixed;
+    /* CRA: o template NUNCA ligou a fonte no body (caía no fallback do
+       preflight) — agora IBM Plex Sans vale de verdade pra tudo que não é mono */
+    font-family: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
     min-height: 100vh;
   }
 }
@@ -125,11 +124,14 @@
 
 /* glow effect for primary elements */
 .glow-primary {
-  box-shadow: 0 0 24px -4px oklch(0.72 0.18 158 / 0.45);
+  /* CRA: era um glow difuso — agora é aresta de forja (borda crisp, sem brilho) */
+  border: 1.5px solid oklch(0.72 0.18 158 / 0.55);
 }
 
 .text-glow {
-  text-shadow: 0 0 12px oklch(0.72 0.18 158 / 0.55);
+  /* CRA: era text-shadow luminoso — ênfase agora é tipográfica */
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 /* voice pulse animation */

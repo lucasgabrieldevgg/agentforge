@@ -16,3 +16,6 @@ tool-results
 .env.local
 .vercelignore
 Dockerfile
+tool-results
+upload
+/prisma/dev.db
