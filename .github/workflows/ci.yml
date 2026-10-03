@@ -26,7 +26,7 @@ jobs:
       - name: Build (smoke real do Next)
         run: bun run build
 
-      - name: higiene CRA
+      - name: higiene
         run: |
           if grep -rEn "sk-or-v1-[A-Za-z0-9]{10}|nvai_[A-Za-z0-9]{10}" src/ prisma/; then echo "segredo real exposto"; exit 1; fi
           grep -q "IBM Plex" src/app/layout.tsx

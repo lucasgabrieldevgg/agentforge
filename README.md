@@ -20,7 +20,7 @@ bun install && bunx prisma generate && bun run lint && bun run build
 
 CI runs the full pipeline on every push (frozen lockfile → Prisma client → ESLint → Next build as a real smoke test + a secret-scan hygiene step).
 
-## 🎨 Identity — FORJA (operação CRA)
+## 🎨 Identity — FORJA
 
 No default-template fonts (Geist/Inter): **IBM Plex Sans + IBM Plex Mono** — engineering typography for an engineering platform. The declared Jarvis-green palette stays (it *is* the identity); what left: corner glow gradients, diffused button/text glows (now crisp forge edges), glass headers. The blueprint grid texture stays — it's the house drawing board.
 

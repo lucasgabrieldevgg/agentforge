@@ -1180,7 +1180,7 @@ function ThinkingBlock({
   const [userToggled, setUserToggled] = useState(false)
 
   // Auto-open while streaming, unless user manually closed
-  // (CRA: ajuste durante o render — padrão oficial, sem useEffect)
+  // (ajuste durante o render — padrão oficial, sem useEffect)
   if (streaming && !userToggled && !open) {
     setOpen(true)
   }

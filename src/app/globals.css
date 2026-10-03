@@ -107,7 +107,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* CRA: o template NUNCA ligou a fonte no body (caía no fallback do
+    /* o template NUNCA ligou a fonte no body (caía no fallback do
        preflight) — agora IBM Plex Sans vale de verdade pra tudo que não é mono */
     font-family: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
     min-height: 100vh;
@@ -124,12 +124,12 @@
 
 /* glow effect for primary elements */
 .glow-primary {
-  /* CRA: era um glow difuso — agora é aresta de forja (borda crisp, sem brilho) */
+  /* era um glow difuso — agora é aresta de forja (borda crisp, sem brilho) */
   border: 1.5px solid oklch(0.72 0.18 158 / 0.55);
 }
 
 .text-glow {
-  /* CRA: era text-shadow luminoso — ênfase agora é tipográfica */
+  /* era text-shadow luminoso — ênfase agora é tipográfica */
   font-weight: 700;
   letter-spacing: 0.02em;
 }

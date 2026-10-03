@@ -32,7 +32,7 @@ export function SkillsMenu({
   const query = slashMatch?.[1]?.toLowerCase() || ""
   const show = !!slashMatch && dismissedFor !== query
 
-  // CRA: `show` é derivado (era estado + useEffect). O reset da seleção usa
+  // `show` é derivado (era estado + useEffect). O reset da seleção usa
   // o padrão oficial "adjust state during render" — sem efeito, lint feliz.
   if (show && resetKey !== query) {
     setResetKey(query)
