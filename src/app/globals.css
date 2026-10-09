@@ -151,3 +151,6 @@
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover { background: oklch(0.35 0.04 158 / 80%); }
+
+/* browser surfaces */
+::selection{background:color-mix(in oklab,var(--primary) 30%,transparent)}
