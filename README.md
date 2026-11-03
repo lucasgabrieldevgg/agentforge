@@ -1,62 +1,64 @@
+<div align="center">
+
+<img src="public/logo.svg" width="88" alt="AgentForge logo" />
+
 # AgentForge
 
-> Open-source AI agent platform — build your personal Jarvis.
+**Open-source AI agent platform — build your personal Jarvis.**
 
-> **Live demo:** https://agentforge-blue-zeta.vercel.app
-
-[![ci](https://github.com/lucasgabrieldevgg/agentforge/actions/workflows/ci.yml/badge.svg)](https://github.com/lucasgabrieldevgg/agentforge/actions/workflows/ci.yml)
+[![CI](https://github.com/lucasgabrieldevgg/agentforge/actions/workflows/ci.yml/badge.svg)](https://github.com/lucasgabrieldevgg/agentforge/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-0.22.1-blue.svg)](package.json)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-6-indigo.svg)](https://www.prisma.io/)
+[![Live demo](https://img.shields.io/badge/demo-online-10b981.svg)](https://agentforge-blue-zeta.vercel.app)
 
-[Leia em Português](README.pt-BR.md)
+[Read in Portuguese](README.pt-BR.md)
 
-## 🧪 Development & tests
+</div>
 
-```
-bun install && bunx prisma generate && bun run lint && bun run build
-```
-
-CI runs the full pipeline on every push (frozen lockfile → Prisma client → ESLint → Next build as a real smoke test + a secret-scan hygiene step).
-
-## 🎨 Identity — FORJA
-
-No default-template fonts (Geist/Inter): **IBM Plex Sans + IBM Plex Mono** — engineering typography for an engineering platform. The declared Jarvis-green palette stays (it *is* the identity); what left: corner glow gradients, diffused button/text glows (now crisp forge edges), glass headers. The blueprint grid texture stays — it's the house drawing board.
+## About
 
 AgentForge turns free APIs into tools and skills for a smart agent. You paste your own API keys (OpenRouter, etc.) and the agent does the rest — it talks, researches and executes. It even runs on an old phone.
 
-## ✨ Features
+The interface follows an engineering-first identity: IBM Plex Sans + IBM Plex Mono typography, a Jarvis-green palette and a blueprint grid texture — no template defaults.
 
-- 🤖 **AI agent** — LLM chat via OpenRouter (free models available)
-- 🌍 **Multilingual** — reply in the user's language (Auto) or force one of 8 languages
-- 🐍 **In-browser Python execution** — Python artifacts run client-side via Pyodide/WASM; send the output back to the agent to close the generate → run → fix loop
-- 📊 **Benchmark harness** — run a fixed battery of tasks through the real agent engine and score models on tool choice, answer correctness and latency
-- 📄 **Auto-save to workspace** — generated code is saved to the project workspace automatically (upsert by filename), with HTML preview and download
-- 🧠 **Thinking mode** — supports models with native reasoning (GPT-OSS, Nemotron Reasoning) + synthetic chain-of-thought for the rest
-- 🔬 **Deep Research** — in-depth multilingual Wikipedia research (3 levels: Quick / High / Max)
-- ✨ **Skills with /commands** — Slack/Discord style: `/translate`, `/summarize`, `/code`, `/explain`, `/joke` and more
-- 🔧 **Plug-and-play tools** — weather, calculator, exchange rates, countries, unit converter, password generator (all free, no key)
-- 🎨 **Jarvis-style dark theme** — emerald green with glow and grid effects
+**Live demo:** <https://agentforge-blue-zeta.vercel.app>
 
-## 🚀 Stack
+## Features
 
-- **Framework:** Next.js 16 (App Router, Turbopack)
-- **Language:** TypeScript 5
-- **Styling:** Tailwind CSS 4 + shadcn/ui (New York)
-- **Database:** Prisma ORM (SQLite in dev, Postgres/Supabase in prod)
-- **State:** Zustand
-- **LLM:** OpenRouter (multi-model)
-- **Telemetry (optional):** Telegram Bot API
+- **AI agent** — LLM chat via OpenRouter (free models available)
+- **Skills with /commands** — Slack/Discord style: `/translate`, `/summarize`, `/code`, `/explain`, `/joke` and more
+- **Plug-and-play tools** — weather, calculator, exchange rates, countries, unit converter, password generator (all free, no key)
+- **In-browser Python execution** — Python artifacts run client-side via Pyodide/WASM; send the output back to the agent to close the generate → run → fix loop
+- **Deep Research** — in-depth multilingual Wikipedia research (3 levels: Quick / High / Max)
+- **Thinking mode** — models with native reasoning (GPT-OSS, Nemotron Reasoning) are used directly; a synthetic chain-of-thought is injected for the rest
+- **Multilingual** — replies in the user's language (Auto) or forces one of 8 languages, saved per project
+- **Benchmark harness** — run a fixed battery of tasks through the real agent engine and score models on tool choice, answer correctness and latency
+- **Auto-save to workspace** — generated code is saved to the project workspace automatically (upsert by filename), with HTML preview and download
+- **Jarvis-style dark theme** — emerald green with glow and grid effects
 
-## 📦 Local installation
+## Tech stack
+
+| Layer | Technology |
+|----------------------|------------------------------------------------------|
+| Framework | Next.js 16 (App Router, Turbopack) |
+| Language | TypeScript 5 |
+| Styling | Tailwind CSS 4 + shadcn/ui (New York) |
+| Database | Prisma ORM — SQLite in dev, Postgres/Supabase in prod |
+| State | Zustand |
+| LLM | OpenRouter (multi-model) |
+| Telemetry (optional) | Telegram Bot API |
+
+## Quick start
 
 ### Prerequisites
 
 - Node.js 18+ or Bun
 - A free OpenRouter key ([get one here](https://openrouter.ai/keys))
 
-### Step by step
+### Local installation
 
 ```bash
 # 1. Clone the repository
@@ -78,43 +80,38 @@ bun run db:push
 bun run dev
 ```
 
-Open http://localhost:3000. Tip: set `DEMO_MODE=false` in `.env` to remove the demo's 80-line code cap and generate longer code with no time limit.
+Open <http://localhost:3000>. Tip: set `DEMO_MODE=false` in `.env` to remove the demo's 80-line code cap and generate longer code with no time limit.
 
-## 🐳 Run with Docker (no limits)
+### Run with Docker (no limits)
 
 ```bash
 docker compose up --build
 ```
 
-Open http://localhost:3000 — that's it. The container runs with `DEMO_MODE=false`
-automatically: no 60s limit, no code-length caps, full Max thinking/deep
-research, and the agent narrates each step while it works. The SQLite database
-lives in a Docker volume, so your projects survive restarts.
+Open <http://localhost:3000> — that's it. The container runs with `DEMO_MODE=false` automatically: no 60s limit, no code-length caps, full Max thinking/deep research, and the agent narrates each step while it works. The SQLite database lives in a Docker volume, so your projects survive restarts.
 
-
-
-## 🔑 Configuration
+## Configuration
 
 ### Environment variables
 
 Copy `.env.example` to `.env` and configure:
 
 | Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | ✅ | Database connection string (local SQLite or Postgres/Supabase in prod) |
-| `DIRECT_DATABASE_URL` | ⚠️ | Prod with Supabase only (session pooler for migrations) |
-| `TELEGRAM_BOT_TOKEN` | ❌ | Telegram bot token for telemetry (optional) |
-| `TELEGRAM_CHAT_ID` | ❌ | Chat ID to send telemetry to (optional) |
-| `CRON_SECRET` | ❌ | Secret to protect the `/api/cron/daily` endpoint |
-| `DEMO_MODE` | ❌ | `true` by default — keeps generated code short so responses fit Vercel Hobby's 60s limit. Set to `false` when self-hosting to lift the cap and raise `max_tokens` |
+|-----------------------|--------------------|-------------|
+| `DATABASE_URL` | Yes | Database connection string (local SQLite or Postgres/Supabase in prod) |
+| `DIRECT_DATABASE_URL` | Supabase prod only | Session pooler URI, used for migrations |
+| `TELEGRAM_BOT_TOKEN` | No | Telegram bot token for optional telemetry |
+| `TELEGRAM_CHAT_ID` | No | Chat ID to send telemetry to |
+| `CRON_SECRET` | No | Secret that protects the `/api/cron/daily` endpoint |
+| `DEMO_MODE` | No | `true` by default — keeps generated code short so responses fit Vercel Hobby's 60s limit. Set to `false` when self-hosting to lift the cap and raise `max_tokens` |
 
 ### User API keys
 
-API keys (OpenRouter, etc.) are configured **through the UI** in the "API Keys" tab. They are stored in the database. Each user pastes their own.
+API keys (OpenRouter, etc.) are configured **through the UI** in the "API Keys" tab. They are stored in the database; each user pastes their own.
 
-**A full tutorial on how to get an OpenRouter key** is available inside the API Keys tab in the app itself.
+A full tutorial on how to get an OpenRouter key is available inside the API Keys tab in the app itself.
 
-## 🎯 How to use
+## Usage
 
 ### Basic chat
 
@@ -122,7 +119,7 @@ API keys (OpenRouter, etc.) are configured **through the UI** in the "API Keys" 
 2. Type a message and hit Enter
 3. The agent replies using the selected model
 
-### Skills (/ commands)
+### Skills (/commands)
 
 Enable skills in the **Skills** tab, then use them in chat:
 
@@ -153,9 +150,7 @@ Enable tools in the **Tools** tab. The agent uses them automatically when needed
 
 ### Language
 
-A language selector sits next to the Think and Deep Research selectors in the chat toolbar.
-Pick **Auto** (default) and the agent replies in whatever language you write in, or force
-one of 8 languages (EN, PT-BR, ES, FR, DE, IT, JA, ZH). The choice is saved per project.
+A language selector sits next to the Think and Deep Research selectors in the chat toolbar. Pick **Auto** (default) and the agent replies in whatever language you write in, or force one of 8 languages (EN, PT-BR, ES, FR, DE, IT, JA, ZH). The choice is saved per project.
 
 ### Thinking mode
 
@@ -163,7 +158,7 @@ one of 8 languages (EN, PT-BR, ES, FR, DE, IT, JA, ZH). The choice is saved per 
 - Models with native reasoning (GPT-OSS, Nemotron Reasoning): used directly
 - Other models: a chain-of-thought prompt is injected
 
-## 🚀 Deploy to Vercel
+## Deploy to Vercel
 
 ### Option 1: CLI
 
@@ -177,16 +172,16 @@ vercel --prod
 ### Option 2: Dashboard
 
 1. Fork this repository
-2. Go to https://vercel.com/new
+2. Go to <https://vercel.com/new>
 3. Import the repository
 4. Configure the environment variables
 5. Deploy
 
 ### Production database
 
-For production, use **Supabase** (500MB free tier):
+For production, use **Supabase** (500 MB free tier):
 
-1. Create an account at https://supabase.com
+1. Create an account at <https://supabase.com>
 2. Create a new project
 3. Go to Settings → Database → Connection string → URI
 4. Configure in Vercel:
@@ -194,23 +189,27 @@ For production, use **Supabase** (500MB free tier):
    - `DIRECT_DATABASE_URL` = session pooler URI (port 5432)
 5. Run `bunx prisma db push --schema=prisma/schema.prod.prisma` locally with `DIRECT_DATABASE_URL` pointing to Supabase
 
-## ⚠️ Demo mode
+A complete step-by-step deployment guide (in Portuguese) is available at [docs/DEPLOY-SUPABASE.md](docs/DEPLOY-SUPABASE.md).
+
+## Demo mode
 
 This repository ships in **demo mode**: a single shared demo user with no login screen. Anyone visiting your deployment shares that user's settings and API keys — deploy it for personal use or behind your own auth.
 
 The demo also runs against Vercel Hobby's 60-second function limit. A built-in **time budget manager** plans each answer against a 55s deadline: tools are dropped when time runs low, `max_tokens` scales to the time left, Max thinking/research levels are clamped to High, and if a generation still can't finish, whatever streamed is delivered with a "shortened by the demo limit" note instead of a hard cutoff. Set `DEMO_MODE=false` to disable all of it — self-hosted instances have no limits and get transparent step-by-step narration from the agent.
 
-## 📁 Project structure
+## Project structure
 
 ```
 agentforge/
 ├── prisma/
 │   ├── schema.prisma          # SQLite schema (dev)
 │   └── schema.prod.prisma     # Postgres schema (prod)
+├── public/
+│   └── logo.svg               # Project logo
 ├── src/
 │   ├── app/
 │   │   ├── api/
-│   │   │   │   ├── conversations/ # Conversation history
+│   │   │   ├── conversations/ # Conversation history
 │   │   │   ├── cron/daily/    # Daily cron job
 │   │   │   ├── integrations/  # Tool toggles
 │   │   │   ├── keys/          # User API keys
@@ -243,27 +242,37 @@ agentforge/
 │   │   └── use-toast.ts
 │   └── stores/
 │       └── app-store.ts       # Zustand
+├── docs/
+│   └── DEPLOY-SUPABASE.md     # Step-by-step production deploy guide
 ├── scripts/
 │   └── vercel-build.sh        # Vercel build script
 ├── vercel.json                # Vercel config (cron jobs)
 └── .env.example
 ```
 
-## 🤝 Contributing
+## Development and CI
 
-Contributions are welcome! Open an issue or a PR.
+```
+bun install && bunx prisma generate && bun run lint && bun run build
+```
 
-## 📝 License
+CI runs the full pipeline on every push (frozen lockfile → Prisma client → ESLint → Next build as a real smoke test, plus a secret-scan hygiene step).
 
-MIT — see [LICENSE](LICENSE).
+## Contributing
 
-## 🙏 Acknowledgements
+Contributions are welcome! Open an issue or a pull request.
+
+## License
+
+Released under the MIT License — see [LICENSE](LICENSE).
+
+## Acknowledgements
 
 - [OpenRouter](https://openrouter.ai/) — access to multiple LLMs
 - [Open-Meteo](https://open-meteo.com/) — free weather without a key
 - [Frankfurter](https://frankfurter.app/) — free exchange rates
 - [REST Countries](https://restcountries.com/) — country data
 - [Wikipedia](https://www.wikipedia.org/) — free knowledge
-- [shadcn/ui](https://ui.shadcn.com/) — beautiful components
-- [Vercel](https://vercel.com/) — free hosting
-- [Supabase](https://supabase.com/) — free database
+- [shadcn/ui](https://ui.shadcn.com/) — component library
+- [Vercel](https://vercel.com/) — hosting
+- [Supabase](https://supabase.com/) — database
