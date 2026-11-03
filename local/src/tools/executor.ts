@@ -2,6 +2,7 @@
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync } from "node:fs";
 import { join, resolve, dirname, isAbsolute } from "node:path";
 import { workspaceRoot } from "../paths";
+import { executeSearchTool } from "./search-impl";
 
 export type ToolResult = { ok: boolean; result?: string; error?: string };
 
@@ -98,8 +99,12 @@ export async function executeTool(name: string, args: Record<string, unknown>): 
         // o supervisor intercepta antes; chegar aqui é fallback
         return { ok: true, result: "recebido" };
       }
-      default:
+      default: {
+        // tools de busca (Agente 1) — implementadas em search-impl.ts
+        const r = await executeSearchTool(name, args);
+        if (r !== null) return r;
         return { ok: false, error: `tool desconhecida: ${name}` };
+      }
     }
   } catch (e: any) {
     return { ok: false, error: e?.message ?? String(e) };

@@ -8,7 +8,10 @@ export type ToolDef = {
   manual: string;
 };
 
-export const TOOLS: ToolDef[] = [
+import { SEARCH_TOOLS } from "./search";
+
+/** Tools de núcleo (arquivos/terminal/tempo) — responsabilidade do líder. */
+export const CORE_TOOLS: ToolDef[] = [
   {
     name: "fs_write",
     description: "Cria ou sobrescreve um arquivo de texto no workspace com o conteúdo fornecido.",
@@ -59,6 +62,9 @@ export const TOOLS: ToolDef[] = [
     manual: "use antes de qualquer coisa que dependa de tempo (commits, nomes com data, agendamentos).",
   },
 ];
+
+/** Catálogo completo: núcleo + busca (Agente 1) — mantenha nesta ordem. */
+export const TOOLS: ToolDef[] = [...CORE_TOOLS, ...SEARCH_TOOLS];
 
 /** Schemas no formato OpenAI/OpenRouter function calling. */
 export function toolSchemas() {
