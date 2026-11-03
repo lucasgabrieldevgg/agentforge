@@ -1,6 +1,6 @@
 // AgentForge Local — servidor HTTP + SSE + arquivos estáticos
 import { readFileSync, existsSync } from "node:fs";
-import { join, extname } from "node:path";
+import { join, resolve, extname } from "node:path";
 import { webRoot } from "./paths";
 import {
   allSettings, setSetting, getSetting, addMessage, allMessages, listJobs, getJob,
@@ -61,11 +61,14 @@ function staticFile(rel: string): Response {
 }
 
 function sse(jobId: string | null): Response {
+  // ⚠ client e hb vivem AQUI (escopo do stream): declarar dentro de start()
+  // faz cancel() referenciar variável inexistente → ReferenceError → CRASH do
+  // daemon a cada disconnect de SSE (reload/fechar aba). Bug crítico v0.1–v0.2.0.
+  let hb: ReturnType<typeof setInterval> | null = null;
+  let client: { jobId: string | null; send: (e: UiEvent) => void } | null = null;
   const stream = new ReadableStream({
     start(controller) {
       const enc = new TextEncoder();
-      let client: { jobId: string | null; send: (e: UiEvent) => void } | null = null;
-      let hb: ReturnType<typeof setInterval> | null = null;
       client = {
         jobId,
         send: (e: UiEvent) => controller.enqueue(enc.encode(`event: ${e.type}\ndata: ${JSON.stringify({ ...e.data, _job: e.jobId, _ts: e.ts })}\n\n`)),
@@ -97,8 +100,9 @@ export function makeServer(port: number) {
       // ---------- UI ----------
       if (req.method === "GET") {
         if (p === "/" || p === "/index.html") return staticFile("index.html");
+        if (p === "/favicon.ico") return staticFile("logo.svg");
         if (p.startsWith("/api")) { /* cai abaixo */ }
-        else if (p.startsWith("/fonts/") || p.startsWith("/app.") || p === "/logo.svg") {
+        if (p.startsWith("/fonts/") || p.startsWith("/fonts.css") || p.startsWith("/app.") || p === "/logo.svg") {
           return staticFile(p.slice(1));
         }
       }

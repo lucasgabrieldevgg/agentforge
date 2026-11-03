@@ -259,7 +259,7 @@ async function loadProjects() {
   state.projects = r.projects || [];
   state.activeProject = r.active;
   projectSel.innerHTML = state.projects.map((p) =>
-    `<option value="${esc(p.id)}" ${p.id === r.active ? "selected" : "">}${esc(p.name)} <span class='dim'>(${p.jobs}j/${p.artifacts}a)</span></option>`).join("");
+    `<option value="${esc(p.id)}" ${p.id === r.active ? "selected" : ""}>${esc(p.name)} (${p.jobs}j/${p.artifacts}a)</option>`).join("");
   const act = state.projects.find((p) => p.id === r.active);
   ppActive.textContent = act ? act.name : "";
   if (state.projects.find((p) => p.id === r.active)) renderProjectDetail(r.active);
@@ -300,7 +300,7 @@ async function renderProjectDetail(id) {
         $("browserBtn").classList.add("active");
       } else {
         fetch(`/api/file?path=${encodeURIComponent(el.dataset.path)}`).then((r) => r.text()).then((t) => {
-          addMsg("agent", `📄 ${el.dataset.path}\n\n${t.slice(0, 2000)}`, Date.now());
+          addMsg("agent", `arquivo: ${el.dataset.path}\n\n${t.slice(0, 2000)}`, Date.now());
         });
       }
     }));

@@ -8,6 +8,8 @@ command -v "$BUN" >/dev/null || BUN="/home/z/my-project/.tools/bun-linux-x64/bun
 
 echo "→ typecheck..."
 "$BUN" build src/index.ts --compile --minify --outfile dist/agentforge-local
+echo "→ checando sintaxe da UI..."
+command -v node >/dev/null && node --check web/app.js || true  # não trava build sem node; bun test valida depois
 echo "→ copiando UI..."
 rm -rf dist/web
 cp -r web dist/web
