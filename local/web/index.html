@@ -6,109 +6,175 @@
   <title>AgentForge · local</title>
   <link rel="icon" href="/logo.svg" type="image/svg+xml">
   <link rel="preload" href="/fonts/PlexSans-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/PlexSans-500.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/PlexSans-600.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts.css">
   <link rel="stylesheet" href="/app.css">
 </head>
 <body>
-  <!-- ─── topbar ─────────────────────────────────────────── -->
-  <header class="topbar">
-    <div class="brand">
-      <svg class="mark" viewBox="0 0 30 30" width="26" height="26" aria-hidden="true">
-        <rect width="30" height="30" rx="6" fill="#0a0e14"/>
-        <rect x="2" y="2" width="26" height="26" rx="5" fill="none" stroke="#10b981" stroke-width="1.5"/>
-        <text x="15" y="21" font-family="IBM Plex Mono, monospace" font-size="16" font-weight="700" fill="#10b981" text-anchor="middle">A</text>
-      </svg>
-      <span class="brand-name">AGENTFORGE</span>
-      <span class="brand-tag">local</span>
-    </div>
-    <div class="topbar-controls">
-      <label class="ctl" title="Modelo preferido (o router troca sozinho se falhar)">
-        <span class="ctl-label">modelo</span>
-        <select id="modelSel" class="ctl-select"></select>
-      </label>
-      <label class="ctl" title="Nível de raciocínio">
-        <span class="ctl-label">pensar</span>
-        <select id="thinkSel" class="ctl-select">
-          <option value="off">off</option>
-          <option value="quick">quick</option>
-          <option value="high" selected>high</option>
-        </select>
-      </label>
-      <button id="continuousBtn" class="ctl-toggle" title="Modo contínuo: o agente trabalha até declarar conclusão" aria-pressed="false">
-        <span class="toggle-dot" aria-hidden="true"></span> contínuo
-      </button>
-      <button id="jobsBtn" class="ctl-icon" title="Painel do job">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 3h12M2 8h12M2 13h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-      </button>
-      <button id="settingsBtn" class="ctl-icon" title="Configurações">
-        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="2.4" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-      </button>
-    </div>
-  </header>
+  <div class="app">
 
-  <!-- ─── corpo: chat + painel do job ────────────────────── -->
-  <main class="main">
-    <section class="chat" id="chatScroll">
-      <div class="chat-inner" id="chatInner">
-        <!-- estado vazio (primeira execução) -->
-        <div class="empty" id="emptyState">
-          <p class="empty-kicker">forja local pronta</p>
-          <h1 class="empty-title">O agente roda na sua máquina.<br>Ferramentas de verdade: arquivos, terminal, git.</h1>
-          <ul class="empty-suggestions">
-            <li><button class="sug" data-fill="Crie o arquivo notas.md no workspace com 3 ideias de app e commita com git.">Crie <code>notas.md</code> com ideias e commita</button></li>
-            <li><button class="sug" data-fill="Liste os arquivos do workspace e me explique a estrutura.">Liste o workspace e explique</button></li>
-            <li><button class="sug" data-fill="Qual a data e hora atual?">Que horas são?</button></li>
-          </ul>
-          <p class="empty-note" id="emptyKeyNote">configure sua chave da OpenRouter no ⚙ pra começar</p>
+    <!-- ─── rail lateral ─────────────────────────────────── -->
+    <nav class="rail" aria-label="navegação">
+      <div class="rail-logo">
+        <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="#151d26"/>
+          <g stroke="#3adc9c" stroke-width="3" stroke-linecap="square" fill="none">
+            <path d="M15.2 8.2 L8 24.8"/>
+            <path d="M16.8 8.2 L24 24.8"/>
+            <path d="M11.9 19.4 L26.2 19.4"/>
+          </g>
+          <rect x="12.2" y="6.2" width="7.6" height="3.4" rx="1.2" fill="#3adc9c"/>
+        </svg>
+      </div>
+      <div class="rail-nav">
+        <button id="chatNav" class="rail-btn active" title="Conversa">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M3 3.8h12a1.3 1.3 0 0 1 1.3 1.3v6.4a1.3 1.3 0 0 1-1.3 1.3H8.1l-3.4 2.6v-2.6H3a1.3 1.3 0 0 1-1.3-1.3V5.1A1.3 1.3 0 0 1 3 3.8z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        </button>
+        <button id="jobsBtn" class="rail-btn" title="Painel do job">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M1.8 9.8h3l1.6-5 2.8 10 2.2-7.4 1.4 2.4h3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="rail-btn" disabled title="Navegador do agente — em construção (F4)">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="7.2" stroke="currentColor" stroke-width="1.5"/><path d="M1.8 9h14.4M9 1.8c-2.6 2.4-2.6 12 0 14.4M9 1.8c2.6 2.4 2.6 12 0 14.4" stroke="currentColor" stroke-width="1.3"/></svg>
+          <span class="soon mono">F4</span>
+        </button>
+      </div>
+      <div class="rail-foot">
+        <span class="rail-dot" id="daemonDot" title="daemon"></span>
+        <button id="settingsBtn" class="rail-btn" title="Configurações">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="2.6" stroke="currentColor" stroke-width="1.5"/><path d="M9 1.8v2.1M9 14.1v2.1M1.8 9h2.1M14.1 9h2.1M3.9 3.9l1.5 1.5M12.6 12.6l1.5 1.5M14.1 3.9l-1.5 1.5M5.4 12.6l-1.5 1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- ─── coluna de trabalho ───────────────────────────── -->
+    <div class="work">
+
+      <header class="topbar">
+        <div class="zone">
+          <h1 class="zone-title">Conversa</h1>
+          <span class="zone-sep" aria-hidden="true">/</span>
+          <span class="zone-meta mono" id="wsPath" title="workspace">workspace</span>
         </div>
-      </div>
-    </section>
+        <div class="topbar-controls">
+          <label class="ctl" title="Modelo preferido — o router troca sozinho se falhar">
+            <span class="ctl-label">modelo</span>
+            <select id="modelSel" class="ctl-select mono"></select>
+          </label>
+          <label class="ctl" title="Nível de raciocínio">
+            <span class="ctl-label">pensar</span>
+            <select id="thinkSel" class="ctl-select mono">
+              <option value="off">off</option>
+              <option value="quick">quick</option>
+              <option value="high" selected>high</option>
+            </select>
+          </label>
+          <button id="continuousBtn" class="ctl-toggle" title="Modo contínuo: o agente trabalha até declarar conclusão" aria-pressed="false">
+            <span class="toggle-dot" aria-hidden="true"></span> contínuo
+          </button>
+        </div>
+      </header>
 
-    <!-- painel do job (colapsável) -->
-    <aside class="jobpanel" id="jobPanel" hidden>
-      <div class="jobpanel-head">
-        <span class="jp-title">job</span>
-        <span class="jp-id mono" id="jpId">—</span>
-        <button class="jp-close" id="jobPanelClose" title="fechar" aria-label="fechar painel">×</button>
-      </div>
-      <div class="jobpanel-status">
-        <span class="jp-status" id="jpStatus">—</span>
-        <span class="jp-meta mono" id="jpMeta"></span>
-      </div>
-      <div class="jobpanel-goal" id="jpGoal"></div>
-      <ol class="jobpanel-timeline" id="jpTimeline"></ol>
-    </aside>
-  </main>
+      <main class="main">
+        <section class="chat" id="chatScroll">
+          <div class="chat-inner" id="chatInner">
 
-  <!-- ─── activity bar efêmera ───────────────────────────── -->
-  <div class="activitybar" id="activityBar" aria-live="polite"></div>
+            <!-- estado vazio (primeira execução) -->
+            <div class="empty" id="emptyState">
+              <div class="empty-mark" aria-hidden="true">
+                <svg viewBox="0 0 32 32" width="46" height="46">
+                  <rect width="32" height="32" rx="8" fill="#151d26"/>
+                  <g stroke="#3adc9c" stroke-width="3" stroke-linecap="square" fill="none">
+                    <path d="M15.2 8.2 L8 24.8"/><path d="M16.8 8.2 L24 24.8"/><path d="M11.9 19.4 L26.2 19.4"/>
+                  </g>
+                  <rect x="12.2" y="6.2" width="7.6" height="3.4" rx="1.2" fill="#3adc9c"/>
+                </svg>
+              </div>
+              <p class="empty-meta mono">forja local pronta · tudo roda e fica no seu pc</p>
+              <h1 class="empty-title">O agente que trabalha<br>na sua máquina.</h1>
+              <p class="empty-sub">Arquivos, terminal, git e pesquisa — de verdade. Se a API cai, o router troca de modelo e o supervisor retoma sozinho; o trabalho só encerra quando a própria IA declara conclusão.</p>
+              <div class="empty-grid">
+                <button class="sug" data-fill="Crie o arquivo notas.md no workspace com 3 ideias de app e commita com git.">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M9 1.5H4A1.5 1.5 0 0 0 2.5 3v10A1.5 1.5 0 0 0 4 14.5h8A1.5 1.5 0 0 0 13.5 13V6L9 1.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8.7 1.8v4.4h4.5M6 9h4M6 11.5h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="sug-body"><b>Criar e commitar</b><i>notas.md com 3 ideias de app</i></span>
+                  <svg class="sug-go" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <button class="sug" data-fill="Pesquise sobre agentes de IA autônomos na Wikipédia e me traga um resumo com as fontes.">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.6" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  <span class="sug-body"><b>Pesquisar com fontes</b><i>agentes de IA na Wikipédia</i></span>
+                  <svg class="sug-go" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <button class="sug" data-fill="Liste os arquivos do workspace e me explique a estrutura.">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M1.8 3.2A1.2 1.2 0 0 1 3 2h3l1.4 1.8h5.8A1.2 1.2 0 0 1 14.4 5v7.8a1.2 1.2 0 0 1-1.2 1.2H3a1.2 1.2 0 0 1-1.2-1.2V3.2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+                  <span class="sug-body"><b>Inspecionar workspace</b><i>estrutura e o que cada coisa faz</i></span>
+                  <svg class="sug-go" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <button class="sug" data-fill="Rode git status no workspace e me explique o estado do repositório.">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M1.8 12.5V4.2l6.2-2.4v12.4L1.8 12.5zM8 1.8l6.2 2.4v8.3L8 14.2" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M4.6 7.2v1.6M11.4 7.2v1.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+                  <span class="sug-body"><b>Usar o terminal</b><i>git status explicado</i></span>
+                  <svg class="sug-go" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
+              <p class="empty-note mono" id="emptyKeyNote">configure sua chave da OpenRouter nas configurações pra começar</p>
+            </div>
 
-  <!-- ─── input ──────────────────────────────────────────── -->
-  <footer class="inputbar">
-    <div class="inputbar-row">
-      <textarea id="input" rows="1" placeholder="peça um trabalho pro agente…  (Enter envia · Shift+Enter quebra linha)"
-        autocomplete="off" spellcheck="false"></textarea>
-      <button id="sendBtn" class="send" title="enviar (Enter)">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 8l11-5.5L11 8l2.5 5.5L2.5 8z" fill="currentColor"/></svg>
-      </button>
-      <button id="stopBtn" class="stop" title="parar job atual" hidden>
-        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="1.5" y="1.5" width="9" height="9" rx="1.5" fill="currentColor"/></svg>
-      </button>
+          </div>
+        </section>
+
+        <!-- painel do job (colapsável) -->
+        <aside class="jobpanel" id="jobPanel" hidden>
+          <div class="jobpanel-head">
+            <span class="jp-title mono">job</span>
+            <span class="jp-id mono" id="jpId"></span>
+            <button class="jp-close" id="jobPanelClose" title="fechar" aria-label="fechar painel">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="jobpanel-status">
+            <span class="jp-status" id="jpStatus">—</span>
+            <span class="jp-meta mono" id="jpMeta"></span>
+          </div>
+          <div class="jobpanel-goal" id="jpGoal"></div>
+          <ol class="jobpanel-timeline" id="jpTimeline"></ol>
+        </aside>
+      </main>
+
+      <!-- ─── activity bar efêmera ─────────────────────────── -->
+      <div class="activitybar" id="activityBar" aria-live="polite"></div>
+
+      <!-- ─── composer ─────────────────────────────────────── -->
+      <footer class="composer">
+        <div class="composer-card">
+          <textarea id="input" rows="1" placeholder="Dê um trabalho ao agente…"
+            title="Enter envia · Shift+Enter quebra linha"
+            autocomplete="off" spellcheck="false"></textarea>
+          <div class="composer-actions">
+            <button id="stopBtn" class="iconbtn stop" title="parar job atual" hidden>
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="1.5" y="1.5" width="9" height="9" rx="2" fill="currentColor"/></svg>
+            </button>
+            <button id="sendBtn" class="iconbtn send" title="enviar (Enter)">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="statusline mono" id="statusLine">parado</div>
+      </footer>
+
     </div>
-    <div class="statusline mono" id="statusLine">parado</div>
-  </footer>
+  </div>
 
   <!-- ─── modal de configurações ─────────────────────────── -->
   <dialog id="settingsModal" class="modal">
     <div class="modal-box">
       <div class="modal-head">
-        <h2>configurações</h2>
-        <button class="modal-close" id="settingsClose" aria-label="fechar">×</button>
+        <h2>Configurações</h2>
+        <button class="modal-close" id="settingsClose" aria-label="fechar">
+          <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
       </div>
       <div class="modal-body">
         <div class="field">
-          <label for="setKey">chave da OpenRouter</label>
+          <label for="setKey">Chave da OpenRouter</label>
           <div class="field-row">
             <input id="setKey" type="password" placeholder="sk-or-v1-…" autocomplete="off">
             <button id="setKeyEye" class="mini" title="mostrar/ocultar">ver</button>
@@ -116,17 +182,17 @@
           <p class="field-help">gratuita em <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">openrouter.ai/keys</a> · fica só no seu computador</p>
         </div>
         <div class="field">
-          <label for="setMaxIter">máximo de iterações por job</label>
+          <label for="setMaxIter">Máximo de iterações por job</label>
           <input id="setMaxIter" type="number" min="2" max="64" value="12">
           <p class="field-help">quantas rodadas de ferramenta o supervisor permite antes de pausar</p>
         </div>
         <div class="field">
-          <label>allowlist do terminal <span class="mono dim">(um binário por linha)</span></label>
+          <label>Allowlist do terminal <span class="mono dim">(um binário por linha)</span></label>
           <textarea id="setAllow" rows="4" class="mono" spellcheck="false"></textarea>
           <p class="field-help">comandos fora desta lista são bloqueados pelo executor</p>
         </div>
         <div class="field">
-          <label>workspace</label>
+          <label>Workspace</label>
           <input id="setWorkspace" class="mono" readonly>
           <p class="field-help">jail de arquivos — tudo que o agente escreve fica aqui</p>
         </div>

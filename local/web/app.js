@@ -31,8 +31,9 @@ async function loadState() {
   $("setAllow").value = r.allowlist.join(", ");
   $("setMaxIter").value = r.settings.max_iterations;
   $("verLine").textContent = `agentforge local v${r.version}`;
+  $("wsPath").textContent = (r.workspace || "").split(/[\\/]/).filter(Boolean).pop() || "workspace";
   const note = $("emptyKeyNote");
-  if (!state.hasKey) { note.textContent = "⚠ configure sua chave da OpenRouter no ⚙ pra começar"; note.classList.add("warn"); }
+  if (!state.hasKey) { note.textContent = "configure sua chave da OpenRouter nas configurações (engrenagem na barra lateral) pra começar"; note.classList.add("warn"); }
   else { note.textContent = "chave configurada · pronto pra trabalhar"; note.classList.remove("warn"); }
   setStatus("parado");
 }
@@ -53,17 +54,29 @@ async function loadHistory() {
 // ───────────────────────── mensagens ──────────────────────
 function ensureEmptyHidden() { if (emptyState) emptyState.style.display = "none"; }
 
+// avatares (SVG inline — sem emoji, sem imagem externa)
+const AVA_AGENT = `<svg viewBox="0 0 32 32" width="17" height="17" aria-hidden="true"><g stroke="#3adc9c" stroke-width="3.4" stroke-linecap="square" fill="none"><path d="M15.2 8.2 L8 24.8"/><path d="M16.8 8.2 L24 24.8"/><path d="M11.9 19.4 L26.2 19.4"/></g><rect x="12.2" y="6.2" width="7.6" height="3.4" rx="1.2" fill="#3adc9c"/></svg>`;
+
 function addMsg(role, text, ts, model) {
   ensureEmptyHidden();
   const el = document.createElement("div");
-  el.className = `msg ${role === "user" ? "user" : "agent"}`;
-  const who = role === "user" ? "você" : "agente";
-  el.innerHTML = `
-    <div class="msg-head">
-      <span class="msg-author">${who}</span>
-      <span class="msg-time mono">${fmtTime(ts || Date.now())}${role === "agent" && model ? " · " + esc(model.split("/").pop()) : ""}</span>
-    </div>
-    <div class="msg-body">${esc(text)}</div>`;
+  const who = role === "user" ? "você" : "forja";
+  if (role === "user") {
+    el.className = "msg user";
+    el.innerHTML = `
+      <div class="msg-card">
+        <div class="msg-head"><span class="msg-author">${who}</span><span class="msg-time mono">${fmtTime(ts || Date.now())}</span></div>
+        <div class="msg-body">${esc(text)}</div>
+      </div>`;
+  } else {
+    el.className = "msg agent";
+    el.innerHTML = `
+      <div class="ava">${AVA_AGENT}</div>
+      <div class="msg-card">
+        <div class="msg-head"><span class="msg-author">${who}</span><span class="msg-time mono">${fmtTime(ts || Date.now())}${model ? " · " + esc(model.split("/").pop()) : ""}</span></div>
+        <div class="msg-body">${esc(text)}</div>
+      </div>`;
+  }
   chatInner.appendChild(el);
   scrollBottom();
   return el.querySelector(".msg-body");
@@ -74,9 +87,9 @@ function addThinking(text, live) {
   el.className = "thinking" + (live ? " open live" : "");
   el.innerHTML = `
     <button class="thinking-head" type="button">
-      <span class="t-label">pensamento</span>
-      <span class="t-badge">stream</span>
-      <span class="t-chevron">▶</span>
+      <span class="t-label">raciocínio</span>
+      <span class="t-badge">ao vivo</span>
+      <span class="t-chevron"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3 1.5L7 5L3 8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
     </button>
     <div class="thinking-body">${esc(text || "")}</div>`;
   el.querySelector(".thinking-head").addEventListener("click", () => el.classList.toggle("open"));
@@ -99,7 +112,7 @@ function chipFor(name) {
   if (c && c.el.isConnected) return c;
   const el = document.createElement("span");
   el.className = "chip running";
-  el.innerHTML = `<span class="c-dot"></span><b>${esc(name)}</b><span class="c-target"></span>`;
+  el.innerHTML = `<span class="c-dot"></span><b>${esc(name)}</b><span class="c-target"></span><svg class="c-check" width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L5 9.5L10 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   activityBar.appendChild(el);
   activityBar.classList.add("has-chips");
   c = { el, timer: null };
@@ -124,33 +137,48 @@ function chipDone(name, ok = true) {
 }
 
 // ───────────────────────── painel do job ──────────────────
+// ícones SVG (11px, stroke 1.5) — um sistema só, sem glifos de texto
+const TL_SVG = {
+  play: `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M3.2 2.2l6.4 3.8-6.4 3.8V2.2z" fill="currentColor"/></svg>`,
+  refresh: `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M10.2 6a4.2 4.2 0 1 1-1.3-3M10.2 1.6v2.2H8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  gear: `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="1.7" stroke="currentColor" stroke-width="1.3"/><path d="M6 1.2v1.4M6 9.4v1.4M1.2 6h1.4M9.4 6h1.4M2.6 2.6l1 1M8.4 8.4l1 1M9.4 2.6l-1 1M3.6 8.4l-1 1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+  check: `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6.4L5 9.4L10 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  swap: `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1.5 3.8h7.6M6.9 1.5l2.3 2.3-2.3 2.3M10.5 8.2H2.9M5.1 5.9L2.8 8.2l2.3 2.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  alert: `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1.5l4.6 8H1.4l4.6-8z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 5v2.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="6" cy="9" r="0.7" fill="currentColor"/></svg>`,
+  corner: `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 2v5.5a2 2 0 0 0 2 2h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  diamond: `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1.5L10.5 6 6 10.5 1.5 6 6 1.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>`,
+  square: `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x="2.2" y="2.2" width="7.6" height="7.6" rx="1.6" fill="currentColor"/></svg>`,
+  x: `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.8 2.8l6.4 6.4M9.2 2.8l-6.4 6.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  pause: `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M4.2 2.4v7.2M7.8 2.4v7.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  dot: `<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="1.6" fill="currentColor"/></svg>`,
+};
 const TL_ICONS = {
-  job_started: ["▶", "ok"], iteration: ["↻", "dim"], tool_start: ["⚙", "ok"], tool_result: ["✓", "ok"],
-  failover: ["⇄", "warn"], auto_resume: ["↻", "warn"], stall_detected: ["⚠", "warn"],
-  continuation: ["⤷", "dim"], declare_done: ["◆", "ok"], job_done: ["■", "ok"],
-  job_failed: ["✕", "err"], job_paused: ["⏸", "warn"], notice: ["·", "dim"], content_final: ["✓", "ok"],
+  job_started: [TL_SVG.play, "ok"], iteration: [TL_SVG.refresh, "dim"], tool_start: [TL_SVG.gear, "ok"], tool_result: [TL_SVG.check, "ok"],
+  failover: [TL_SVG.swap, "warn"], auto_resume: [TL_SVG.refresh, "warn"], stall_detected: [TL_SVG.alert, "warn"],
+  continuation: [TL_SVG.corner, "dim"], declare_done: [TL_SVG.diamond, "ok"], job_done: [TL_SVG.square, "ok"],
+  job_failed: [TL_SVG.x, "err"], job_paused: [TL_SVG.pause, "warn"], notice: [TL_SVG.dot, "dim"], content_final: [TL_SVG.check, "ok"],
 };
 function tlAdd(type, data, ts) {
   const [ico, cls] = TL_ICONS[type] || ["·", "dim"];
   const li = document.createElement("li");
   let text = "";
   switch (type) {
-    case "job_started": text = `job iniciado · ${esc(data.model || "")}${data.continuous ? " · contínuo" : ""}`; break;
+    case "job_started": text = `job iniciado · <span class="mono">${esc(data.model || "")}</span>${data.continuous ? " · contínuo" : ""}`; break;
     case "iteration": text = `iteração ${data.n}/${data.max}`; break;
-    case "tool_start": text = `tool <b>${esc(data.name)}</b> ${esc(JSON.stringify(data.args || {}).slice(0, 90))}`; break;
-    case "tool_result": text = `${data.ok ? "✓" : "✕"} ${esc(data.name)} → ${esc(String(data.result || data.error || "").slice(0, 120))}`; break;
-    case "failover": text = `API ${esc(data.from)} falhou → troquei pra ${esc(data.to)}`; break;
+    case "tool_start": text = `tool <b>${esc(data.name)}</b> <span class="mono">${esc(JSON.stringify(data.args || {}).slice(0, 80))}</span>`; break;
+    case "tool_result": text = `${data.ok ? "✓" : "✕"} ${esc(data.name)} → <span class="mono">${esc(String(data.result || data.error || "").slice(0, 110))}</span>`; break;
+    case "failover": text = `API <span class="mono">${esc(data.from)}</span> falhou → troquei pra <span class="mono">${esc(data.to)}</span>`; break;
     case "auto_resume": text = esc(data.why || "retomando…"); break;
-    case "stall_detected": text = `parada detectada: ${esc(data.error || "")}`; break;
+    case "stall_detected": text = `parada detectada: <span class="mono">${esc(data.error || "")}</span>`; break;
     case "continuation": text = esc(data.why || ""); break;
-    case "declare_done": text = `DECLAROU CONCLUSÃO — ${esc(data.summary || "")}`; break;
+    case "declare_done": text = `<span class="tl-done">declarou conclusão</span> — ${esc(data.summary || "")}`; break;
     case "job_done": text = "job concluído"; break;
     case "job_failed": text = `falhou: ${esc(data.error || "")}`; break;
     case "job_paused": text = `pausado: ${esc(data.reason || "")}`; break;
     case "content_final": text = "resposta final"; break;
     default: text = esc(data.text || data.why || type);
   }
-  li.innerHTML = `<span class="tl-ico ${cls}">${ico}</span><span class="tl-text">${text}</span><span class="tl-time">${fmtTime(ts || Date.now())}</span>`;
+  li.innerHTML = `<span class="tl-node ${cls}">${ico}</span><div class="tl-content"><span class="tl-text">${text}</span><span class="tl-time">${fmtTime(ts || Date.now())}</span></div>`;
   jpTimeline.appendChild(li);
   jpTimeline.scrollTop = jpTimeline.scrollHeight;
 }
@@ -158,7 +186,7 @@ function setJobStatus(txt, cls) { jpStatus.textContent = txt; jpStatus.className
 
 // ───────────────────────── status line ────────────────────
 function setStatus(txt, live) {
-  statusLine.innerHTML = `<span class="${live ? "s-live" : ""}">${esc(txt)}</span><span class="dim">· localhost · dados locais</span>`;
+  statusLine.innerHTML = `<span class="s-dot${live ? " live" : ""}"></span><span class="s-txt ${live ? "s-live" : ""}">${esc(txt)}</span><span class="s-sep">·</span><span>localhost</span><span class="s-sep">·</span><span>dados locais</span>`;
 }
 
 // ───────────────────────── SSE ────────────────────────────
@@ -166,8 +194,9 @@ let es = null;
 function connectSSE() {
   if (es) es.close();
   es = new EventSource("/api/events");
-  es.addEventListener("hello", () => setStatus(state.running ? "trabalhando…" : "pronto", state.running));
-  es.onerror = () => setStatus("reconectando…", true);
+  es.onopen = () => $("daemonDot").classList.add("on");
+  es.addEventListener("hello", () => { $("daemonDot").classList.add("on"); setStatus(state.running ? "trabalhando…" : "pronto", state.running); });
+  es.onerror = () => { $("daemonDot").classList.remove("on"); setStatus("reconectando…", true); };
   for (const t of ["job_started", "iteration", "tool_start", "tool_result", "failover", "auto_resume",
     "stall_detected", "continuation", "declare_done", "job_done", "job_failed", "job_paused", "notice"]) {
     es.addEventListener(t, (e) => handleEvent(t, JSON.parse(e.data)));
@@ -176,8 +205,10 @@ function connectSSE() {
     const d = JSON.parse(e.data);
     if (!state.streamEl) state.streamEl = addMsg("agent", "", Date.now());
     const body = state.streamEl;
+    const cur = body.querySelector(".cursor");
+    if (cur) cur.remove();
     body.textContent += d.delta;
-    const cursor = body.querySelector(".cursor");
+    body.insertAdjacentHTML("beforeend", '<span class="cursor"></span>');
     scrollBottom();
   });
   es.addEventListener("thinking_delta", (e) => {
@@ -202,12 +233,13 @@ function handleEvent(type, d) {
     $("jobsBtn").classList.add("active");
   }
   if (d._job && d._job !== state.jobId) return;
+  if (type === "job_started") jpTimeline.innerHTML = ""; // limpa antes de registrar o início
   tlAdd(type, d, d._ts);
   switch (type) {
     case "job_started":
       state.running = true; sendBtn.disabled = true; stopBtn.hidden = false;
       jpId.textContent = d._job; jpGoal.textContent = d.goal;
-      jpTimeline.innerHTML = ""; setJobStatus("EM ANDAMENTO"); jpMeta.textContent = "";
+      setJobStatus("EM ANDAMENTO"); jpMeta.textContent = "";
       setStatus("trabalhando…", true); break;
     case "iteration":
       jpMeta.textContent = `iter ${d.n}/${d.max}`; break;
@@ -250,7 +282,7 @@ async function send() {
       body: JSON.stringify({ message: text }),
     }).then((r) => r.json());
     if (r.jobId) state.jobId = r.jobId;
-    if (!jobPanel.hidden === false) jobPanel.hidden = false;
+    jobPanel.hidden = false;
   } catch (e) {
     addMsg("agent", "erro ao iniciar o job: " + e.message, Date.now());
     state.running = false; sendBtn.disabled = false;
@@ -274,6 +306,12 @@ document.querySelectorAll(".sug").forEach((b) =>
   b.addEventListener("click", () => { input.value = b.dataset.fill; input.focus(); autoGrow(); }));
 
 // ───────────────────────── controles ──────────────────────
+$("chatNav").addEventListener("click", () => {
+  jobPanel.hidden = true;
+  $("jobsBtn").classList.remove("active");
+  $("chatNav").classList.add("active");
+  input.focus();
+});
 modelSel.addEventListener("change", () => save({ preferred_model: modelSel.value }));
 thinkSel.addEventListener("change", () => save({ thinking_mode: thinkSel.value }));
 continuousBtn.addEventListener("click", async () => {
@@ -286,9 +324,10 @@ async function save(patch) { await fetch("/api/settings", { method: "POST", head
 $("jobsBtn").addEventListener("click", () => {
   jobPanel.hidden = !jobPanel.hidden;
   $("jobsBtn").classList.toggle("active", !jobPanel.hidden);
+  $("chatNav").classList.toggle("active", jobPanel.hidden);
   if (!jobPanel.hidden && state.jobId) refreshJobPanel(state.jobId);
 });
-$("jobPanelClose").addEventListener("click", () => { jobPanel.hidden = true; $("jobsBtn").classList.remove("active"); });
+$("jobPanelClose").addEventListener("click", () => { jobPanel.hidden = true; $("jobsBtn").classList.remove("active"); $("chatNav").classList.add("active"); });
 
 async function refreshJobPanel(id) {
   const r = await fetch(`/api/jobs/${id}`).then((r) => r.json());

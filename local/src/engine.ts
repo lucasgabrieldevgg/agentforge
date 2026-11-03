@@ -3,7 +3,7 @@ import { toolsManual } from "./tools/registry";
 import type { ChatMessage } from "./providers";
 import { RANKED_MODELS } from "./providers";
 
-export const APP_VERSION = "0.1.0";
+export const APP_VERSION = "0.2.0";
 
 export function buildSystemPrompt(opts: {
   continuous: boolean;
