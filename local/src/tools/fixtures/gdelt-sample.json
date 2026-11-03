@@ -1,0 +1,34 @@
+{
+  "articles": [
+    {
+      "url": "https://example.com/news/ai-regulation-2026",
+      "url_mobile": "",
+      "title": "World leaders meet to discuss AI regulation framework",
+      "seendate": "20261103T013000Z",
+      "socialimage": "",
+      "domain": "example.com",
+      "language": "English",
+      "sourcecountry": "United States"
+    },
+    {
+      "url": "https://exemplo.com.br/noticias/ia-trabalho",
+      "url_mobile": "",
+      "title": "Estudo mostra impacto da IA no mercado de trabalho brasileiro",
+      "seendate": "20261102T224500Z",
+      "socialimage": "",
+      "domain": "exemplo.com.br",
+      "language": "Portuguese",
+      "sourcecountry": "Brazil"
+    },
+    {
+      "url": "https://example.eu/tech/ai-chips-report",
+      "url_mobile": "",
+      "title": "EU publishes report on AI chip supply chains",
+      "seendate": "20261102T183000Z",
+      "socialimage": "",
+      "domain": "example.eu",
+      "language": "English",
+      "sourcecountry": "Germany"
+    }
+  ]
+}
