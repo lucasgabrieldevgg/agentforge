@@ -4,11 +4,11 @@
 // Quatro grupos:
 //   1. CONTRATO       — cada tool tem description, manual e params documentadas (sem rede)
 //   2. CAMINHO TRISTE — query vazia → ok:false; tool desconhecida → null (sem rede)
-//   3. PARSERS        — arXiv/Bing com fixtures REAIS; GDELT sintético (sem rede)
+//   3. PARSERS        — arXiv/Bing com fixtures REAIS; GDELT sintético; DDG inline (sem rede)
 //   4. LIVE           — cada tool contra a API REAL (rede disponível; skip se offline)
 import { describe, test, expect } from "bun:test";
 import { SEARCH_TOOLS } from "./search";
-import { executeSearchTool, parseArxivXml, parseBingHtml, formatGdelt } from "./search-impl";
+import { executeSearchTool, parseArxivXml, parseBingHtml, formatGdelt, parseDdgLite } from "./search-impl";
 import { TOOLS } from "./registry";
 
 const NAMES = SEARCH_TOOLS.map(t => t.name);
@@ -103,6 +103,33 @@ describe("parsers offline (fixtures)", () => {
     expect(parseBingHtml('<ol><li class="b_algo"><div>x</div></li></ol>')).toEqual([]);
   });
 
+  test("parseDdgLite: anúncio fora, redirect uddg resolvido, snippet casado (merge A1)", () => {
+    const html = [
+      '<table>',
+      '<tr><td class="result-snippet">snippet um real</td></tr>',
+      '<tr><td class="result-snippet">snippet dois real</td></tr>',
+      `<tr><td><a class="result-link" href="//duckduckgo.com/l/?uddg=${encodeURIComponent("https://bun.sh/docs")}">Bun — Docs</a></td></tr>`,
+      '<tr><td><a class="result-link" href="https://duckduckgo.com/y.js?ad_provider=business&ad_domain=example.com&uddg=https%3A%2F%2Fanuncio.example">PROMOVIDO anuncio</a></td></tr>',
+      '<tr><td><a class="result-link" href="https://example.org/real-page">Pagina real</a></td></tr>',
+      '</table>',
+    ].join("\n");
+    const out = parseDdgLite(html);
+    expect(out.blocked).toBe(false);
+    expect(out.hits.length).toBe(2); // anúncio com ad_provider descartado (A1)
+    expect(out.hits[0].href).toBe("https://bun.sh/docs"); // redirect uddg de-embrulhado
+    expect(out.hits[0].title).toBe("Bun — Docs");
+    expect(out.hits[0].snippet).toBe("snippet um real"); // snippet casado por índice
+    expect(out.hits[1].href).toBe("https://example.org/real-page");
+    expect(out.hits.some(h => h.href.includes("anuncio"))).toBe(false);
+  });
+
+  test("parseDdgLite: página de desafio (captcha) → blocked=true, 0 hits (merge A1)", () => {
+    const html = '<html><body>If this persists, please contact us with the anomaly detection reference below. select all squares containing a duck</body></html>';
+    const out = parseDdgLite(html);
+    expect(out.blocked).toBe(true);
+    expect(out.hits.length).toBe(0);
+  });
+
   test("formatGdelt com amostra no formato da API (sintética)", async () => {
     const j = await Bun.file(import.meta.dir + "/fixtures/gdelt-sample.json").json();
     const out = formatGdelt(j);
@@ -169,10 +196,9 @@ describe(`live: APIs reais ${netOk ? "(rede OK)" : "(SEM rede — pulando)"}`, (
     expect(r!.result!).toContain("pts");
   }, 20_000);
 
-  test.skipIf(!netOk)("stack_search devolve perguntas com score", async () => {
+  test.skipIf(!netOk)("stack_search devolve perguntas com score (ou quota do IP esgotada, erro limpo)", async () => {
     const r = await executeSearchTool("stack_search", { query: "python list comprehension" });
-    expect(r!.ok).toBe(true);
-    expect(r!.result!).toContain("stackoverflow.com");
+    assertLiveOrRateLimited(r, "stackoverflow.com", "|HTTP 400|quota|throttle");
   }, 20_000);
 
   test.skipIf(!netOk)("github_search devolve repos com estrelas", async () => {

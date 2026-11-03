@@ -1,7 +1,9 @@
 // AgentForge Local — tools de BUSCA grátis (F5 do roadmap)
 // ─────────────────────────────────────────────────────────────
-// 👥 RESPONSABILIDADE: Z.ai (líder) — assumida do Agente 1 em 2026-11-03
-//    (DECISÃO na sala: A1 não executou; branch feat/agente1-search inexistente).
+// 👥 RESPONSABILIDADE: Z.ai (líder) + Agente 1 (Z) — DUAS implementações
+//    paralelas da mesma spec; merge seletivo em 2026-11-03 por diretriz do
+//    dono ("dois códigos → o melhor de cada, num único") — detalhes em
+//    docs/07 §8 do agentforge-brain.
 //
 // CONTRATO (não mexa no resto do app, só aqui):
 //   1. Cada tool nova = uma entrada em SEARCH_TOOLS abaixo (schema + manual).
@@ -9,7 +11,8 @@
 //   3. O registry e o executor já importam daqui — nada mais precisa mudar.
 //   4. Manual curto e direto: o LLM lê isso pra decidir quando usar.
 //   5. Zero dependências: use fetch nativo (Bun). Sem API keys.
-//   6. Timeout curto (10s) e resultado cortado em ~12KB.
+//   6. Timeout curto (10s; GDELT 20s — cold-start medido em campo) e
+//      resultado cortado em ~12KB.
 //
 // As 9 tools (ordem = prioridade de uso geral):
 //   web_search       — DuckDuckGo Lite (busca web geral, o fallback universal)
@@ -34,7 +37,7 @@ export const SEARCH_TOOLS: ToolDef[] = [
     parameters: {
       query: { type: "string", description: "Termo de busca (ex: 'bun javascript runtime')", required: true },
     },
-    manual: "primeira escolha pra quase qualquer pesquisa na web. Se rate-limitar (429), caia pra wikipedia_search (conceitos), hn_search (tech) ou gdelt_search (notícias).",
+    manual: "primeira escolha pra quase qualquer pesquisa na web. Se rate-limitar (429), caia pra wikipedia_search (conceitos), hn_search (tech) ou gdelt_search (notícias). Peça mais de uma fonte quando o tema for sensível.",
   },
   {
     name: "arxiv_search",

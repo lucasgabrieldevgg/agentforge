@@ -1,5 +1,8 @@
 // AgentForge Local — executor das tools de busca (F5)
-// 👥 RESPONSABILIDADE: Z.ai (líder) — assumida do Agente 1 em 2026-11-03 (DECISÃO na sala).
+// 👥 RESPONSABILIDADE: Z.ai (líder) — merge seletivo de DUAS implementações
+//    paralelas da mesma spec (Z.ai 94f410d + Agente 1 da90c2b1), diretriz do
+//    dono em 2026-11-03: "dois códigos → o melhor de cada, num único".
+//    Contribuições do Agente 1 marcadas com (A1) — ver docs/07 §8.
 // Padrão: retorne { ok: true, result: string } ou { ok: false, error: string };
 // retorne null SOMENTE quando o nome não for de busca (o executor core decide o resto).
 // Erros devem ser ACIONÁVEIS: dizem o que aconteceu e sugerem fonte alternativa,
@@ -107,17 +110,18 @@ function bingUnwrap(u: string): string {
   }
 }
 
-// ---------- motor 1: DuckDuckGo Lite (POST form) ----------
-async function ddgLite(q: string): Promise<Hit[]> {
-  const r = await fetchT("https://lite.duckduckgo.com/lite/", {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": UA, accept: "text/html" },
-    body: new URLSearchParams({ q }).toString(),
-    timeoutMs: 8_000,
-  });
-  if (r.status === 429) throw new Error("HTTP 429 (rate limit) — tentando Bing");
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  const html = await r.text();
+// ---------- motor 1: DuckDuckGo Lite (POST form; GET se a rede filtrar POST) ----------
+
+/** Página de bloqueio/anti-bot? (A1) — o DDG devolve 200 com página de desafio
+ *  pra IP de datacenter; sem isto, um BLOQUEIO com 0 resultados seria reportado
+ *  como "nada encontrado", o que engana o agente (a query pode ter resultados). */
+export function isBlockedPage(html: string): boolean {
+  return /anomaly|challenge|captcha|unusual traffic|access denied|request blocked/i.test(html ?? "");
+}
+
+/** Parser do DDG Lite — exportado p/ teste offline. (A1) filtro de anúncios:
+ *  redirects do DDG com ad_provider/ad_domain são descartados do resultado. */
+export function parseDdgLite(html: string): { hits: Hit[]; blocked: boolean } {
   const hits: Hit[] = [];
   const anchorRe = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
   let m: RegExpExecArray | null;
@@ -126,13 +130,40 @@ async function ddgLite(q: string): Promise<Hit[]> {
     if (!/class=["'][^"']*result-link/i.test(attrs)) continue;
     const href = /href=["']([^"']+)["']/i.exec(attrs)?.[1] ?? "";
     const title = strip(m[2]);
-    if (href && title) hits.push({ href: resolveDdg(href), title });
+    if (!href || !title) continue;
+    try { // anúncio do DDG Lite (A1): marcadores de ad no redirect → fora
+      const u = new URL(href.startsWith("//") ? "https:" + href : href, "https://duckduckgo.com");
+      if (u.searchParams.has("ad_provider") || u.searchParams.has("ad_domain")) continue;
+    } catch { /* href relativo estranho — segue como veio */ }
+    hits.push({ href: resolveDdg(href), title });
   }
   const snippets: string[] = [];
   const snipRe = /<td[^>]*class=["'][^"']*result-snippet[^"']*["'][^>]*>([\s\S]*?)<\/td>/gi;
   while ((m = snipRe.exec(html)) !== null) snippets.push(strip(m[1]));
   hits.forEach((h, i) => { if (snippets[i]) h.snippet = snippets[i]; });
-  return hits; // vazio = sem resultados OU captcha/anti-bot → chamador cai pro Bing
+  return { hits, blocked: isBlockedPage(html) };
+}
+
+async function ddgLite(q: string): Promise<{ hits: Hit[]; blocked: boolean }> {
+  const r = await fetchT("https://lite.duckduckgo.com/lite/", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": UA, accept: "text/html" },
+    body: new URLSearchParams({ q }).toString(),
+    timeoutMs: 8_000,
+  });
+  if (r.status === 429) throw new Error("HTTP 429 (rate limit) — tentando Bing");
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const out = parseDdgLite(await r.text());
+  // (A1) POST filtrado por rede intermediária? 0 resultados SEM página de
+  // bloqueio → tenta GET no mesmo motor (captcha é bloqueio: GET não ajudaria)
+  if (out.hits.length === 0 && !out.blocked) {
+    const r2 = await fetchT(`https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(q)}`, {
+      headers: { "user-agent": UA, accept: "text/html" },
+      timeoutMs: 8_000,
+    });
+    if (r2.ok) return parseDdgLite(await r2.text());
+  }
+  return out;
 }
 
 // ---------- motor 2 (fallback): Bing HTML ----------
@@ -156,13 +187,14 @@ export function parseBingHtml(html: string): Hit[] {
   return hits;
 }
 
-async function bingSearch(q: string): Promise<Hit[]> {
+async function bingSearch(q: string): Promise<{ hits: Hit[]; blocked: boolean }> {
   const r = await fetchT(`https://www.bing.com/search?q=${encodeURIComponent(q)}&setlang=en&count=10`, {
     headers: { "user-agent": UA, accept: "text/html", "accept-language": "en-US,en;q=0.9" },
     timeoutMs: 10_000,
   });
   if (!r.ok) throw new Error(`HTTP ${r.status} (Bing)`);
-  return parseBingHtml(await r.text());
+  const html = await r.text();
+  return { hits: parseBingHtml(html), blocked: isBlockedPage(html) };
 }
 
 // Códigos WMO (Open-Meteo) em PT-BR — subconjunto dos mais comuns
@@ -216,16 +248,23 @@ export async function executeSearchTool(name: string, args: Record<string, unkno
         if (!q) return { ok: false, error: "query obrigatória" };
         let hits: Hit[] = [];
         let engine = "duckduckgo";
+        let blocked = false;
         try {
-          hits = await ddgLite(q);
+          const d = await ddgLite(q);
+          hits = d.hits; blocked = d.blocked;
         } catch {
-          hits = []; // DDG fora/captcha/rate-limit → Bing decide
+          hits = []; // DDG fora/rate-limit na rede → Bing decide
         }
         if (hits.length === 0) {
           engine = "bing";
-          hits = await bingSearch(q); // se o Bing também falhar, o catch externo devolve erro limpo
+          const b = await bingSearch(q); // se o Bing também falhar, o catch externo devolve erro limpo
+          hits = b.hits; blocked = blocked || b.blocked;
         }
         if (hits.length === 0) {
+          // (A1) distinguir BLOQUEIO de vazio: "nada encontrado" num bloqueio engana o agente
+          if (blocked) {
+            return { ok: false, error: "DDG e Bing bloquearam a requisição (anti-bot/captcha) — tente wikipedia_search, hn_search ou gdelt_search" };
+          }
           return { ok: true, result: `nada encontrado para: ${q} — tente termos diferentes ou outra fonte (wikipedia_search, hn_search, gdelt_search)` };
         }
         const lines = hits.slice(0, 8).map((h, i) =>
@@ -281,7 +320,15 @@ export async function executeSearchTool(name: string, args: Record<string, unkno
       case "stack_search": {
         const q = String(args.query ?? "").trim();
         if (!q) return { ok: false, error: "query obrigatória" };
-        const j = JSON.parse(await getText(`https://api.stackexchange.com/2.3/search/advanced?q=${qPlus(q)}&site=stackoverflow&pagesize=15&sort=relevance`));
+        let raw: string;
+        try {
+          raw = await getText(`https://api.stackexchange.com/2.3/search/advanced?q=${qPlus(q)}&site=stackoverflow&pagesize=15&sort=relevance`);
+        } catch (e: any) {
+          // throttle_violation chega como HTTP 400 (não 429): quota diária do IP
+          if (String(e?.message).includes("400")) throw new Error("HTTP 400 — quota diária da StackExchange esgotada neste IP (throttle_violation); use web_search ou aguarde o reset (~24h)");
+          throw e;
+        }
+        const j = JSON.parse(raw);
         const items = j?.items ?? [];
         if (items.length === 0) return { ok: true, result: `nada no Stack Overflow para: ${q}` };
         const lines = items.slice(0, 10).map((it: any) =>
@@ -312,7 +359,7 @@ export async function executeSearchTool(name: string, args: Record<string, unkno
 
       // ── 7. weather_lookup — Open-Meteo (geocoding + forecast) ────────
       case "weather_lookup": {
-        const city = String(args.city ?? "").trim();
+        const city = String(args.city ?? args.query ?? "").trim(); // (A1) alias: o LLM às vezes passa 'query'
         if (!city) return { ok: false, error: "city obrigatória (ex: 'Manaus')" };
         const days = Math.min(Math.max(Number(args.days ?? 3) || 3, 1), 7);
         const gj = JSON.parse(await getText(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=pt&format=json`));
@@ -338,13 +385,13 @@ export async function executeSearchTool(name: string, args: Record<string, unkno
         return { ok: true, result: lines.join("\n").slice(0, MAX_OUT) };
       }
 
-      // ── 8. gdelt_search — JSON (notícias globais; timeout 15s: o serviço
-      //        responde devagar por natureza, e IPs de datacenter levam ~11s
-      //        só pra receber o 429) ────────────────────────────────────────
+      // ── 8. gdelt_search — JSON (notícias globais; timeout 20s: cold-start
+      //        de ~13s medido em campo (A1) + 429 de IP compartilhado chega em
+      //        ~11s — o timeout só corta o silêncio total) ──────────────────
       case "gdelt_search": {
         const q = String(args.query ?? "").trim();
         if (!q) return { ok: false, error: "query obrigatória" };
-        const raw = await getText(`https://api.gdeltproject.org/api/v2/doc/doc?query=${qPlus(q)}&mode=artlist&maxrecords=15&sort=datedesc&format=json`, {}, 15_000);
+        const raw = await getText(`https://api.gdeltproject.org/api/v2/doc/doc?query=${qPlus(q)}&mode=artlist&maxrecords=15&sort=datedesc&format=json`, {}, 20_000);
         let j: any;
         try {
           j = JSON.parse(raw);
