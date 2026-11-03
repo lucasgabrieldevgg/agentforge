@@ -10,8 +10,11 @@ import { RANKED_MODELS, DEFAULT_MODEL, healthSnapshot, availableModels, type Aut
 import { DIRECT_PROVIDERS } from "./providers-direct";
 import { Supervisor, stopJob, recoverOrphans, type UiEvent } from "./supervisor";
 import { allowlist } from "./tools/executor";
+import { browserStatus, installBrowser } from "./tools/browser-impl";
 import { workspaceRoot } from "./paths";
 import { APP_VERSION } from "./engine";
+import { readFileSync, existsSync } from "node:fs";
+import { join, resolve, extname } from "node:path";
 
 // ---------- event bus (SSE) ----------
 const sseClients = new Set<{ jobId: string | null; send: (e: UiEvent) => void }>();
@@ -93,6 +96,33 @@ export function makeServer(port: number) {
 
       // ---------- API ----------
       if (p === "/api/health") return json({ ok: true, version: APP_VERSION, port });
+
+      // F4: status + instalação on-demand do navegador do agente
+      if (p === "/api/browser/status" && req.method === "GET") {
+        return json(browserStatus());
+      }
+      if (p === "/api/browser/install" && req.method === "POST") {
+        try {
+          const r = await installBrowser((pct, mb) => emit({ type: "browser_install", jobId: null, data: { pct, mb }, ts: Date.now() }));
+          emit({ type: "browser_install", jobId: null, data: { done: true, ...r }, ts: Date.now() });
+          return json({ ok: true, ...r });
+        } catch (e: any) {
+          return json({ ok: false, error: String(e?.message ?? e) }, 500);
+        }
+      }
+
+      // F4: servir arquivo do workspace (evidências/screenshots) — jail respeitada
+      if (p === "/api/file" && req.method === "GET") {
+        const rel = url.searchParams.get("path") ?? "";
+        const root = workspaceRoot();
+        const abs = resolve(join(root, rel));
+        if (abs !== root && !abs.startsWith(root + "/") && !abs.startsWith(root + "\\")) {
+          return json({ error: "caminho fora do workspace" }, 403);
+        }
+        if (!existsSync(abs)) return json({ error: "arquivo não existe" }, 404);
+        const type = ({ ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".txt": "text/plain; charset=utf-8", ".md": "text/plain; charset=utf-8", ".json": "application/json" } as Record<string, string>)[extname(abs)] ?? "application/octet-stream";
+        return new Response(readFileSync(abs), { headers: { "Content-Type": type, "Cache-Control": "no-store" } });
+      }
 
       if (p === "/api/state" && req.method === "GET") {
         const s = allSettings();

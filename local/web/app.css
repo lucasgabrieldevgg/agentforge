@@ -536,3 +536,11 @@ li .tl-text .tl-done { color: var(--accent-hi); font-weight: 600; }
 /* ─── providers diretos (F2) ─── */
 .mini-link { font-size: 11px; color: var(--acc, #3adc9c); text-decoration: none; border: 1px solid rgba(58,220,156,.25); border-radius: 6px; padding: 3px 8px; white-space: nowrap; }
 .mini-link:hover { background: rgba(58,220,156,.08); }
+
+/* ─── painel do navegador (F4) ─── */
+.browserpanel { min-width: 300px; max-width: 360px; }
+.bp-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; padding: 8px 14px; border-bottom: 1px solid var(--line, rgba(255,255,255,.06)); }
+.bp-ok { color: #3adc9c; font-weight: 600; }
+.bp-warn { color: #e8b64c; font-weight: 600; }
+.bp-shotwrap { padding: 10px 14px; border-bottom: 1px solid var(--line, rgba(255,255,255,.06)); }
+.bp-shotwrap img { width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,.08); display: block; }

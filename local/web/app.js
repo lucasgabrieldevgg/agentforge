@@ -193,6 +193,63 @@ function tlAdd(type, data, ts) {
 }
 function setJobStatus(txt, cls) { jpStatus.textContent = txt; jpStatus.className = "jp-status " + (cls || ""); }
 
+// ───────────────────────── painel do navegador (F4) ───────
+const browserPanel = $("browserPanel"), bpUrl = $("bpUrl"), bpStatus = $("bpStatus"), bpShot = $("bpShot"), bpShotWrap = $("bpShotWrap"), bpSteps = $("bpSteps");
+
+async function loadBrowserStatus() {
+  try {
+    const st = await fetch("/api/browser/status").then((r) => r.json());
+    renderBrowserStatus(st);
+  } catch { /* painel fecha sem status */ }
+}
+function renderBrowserStatus(st) {
+  if (st.installed) {
+    bpStatus.innerHTML = `<span class="bp-ok">navegador pronto</span> <span class="mono dim">headless-shell r${st.revision}</span>`;
+  } else if (st.installing) {
+    bpStatus.innerHTML = `<span class="bp-warn">baixando navegador…</span> <span class="mono dim" id="bpProg"></span>`;
+  } else {
+    bpStatus.innerHTML = `<span class="bp-warn">navegador não instalado</span>
+      <button class="mini" id="bpInstall">instalar (~200MB, uma vez)</button>
+      <p class="field-help">o modo lite (browser_open mode:'lite') funciona sem navegador</p>`;
+    const b = $("bpInstall");
+    if (b) b.addEventListener("click", async () => {
+      b.disabled = true; b.textContent = "baixando…";
+      await fetch("/api/browser/install", { method: "POST" });
+    });
+  }
+}
+$("browserBtn").addEventListener("click", () => {
+  browserPanel.hidden = !browserPanel.hidden;
+  $("browserBtn").classList.toggle("active", !browserPanel.hidden);
+  if (!browserPanel.hidden) { loadBrowserStatus(); }
+});
+$("browserPanelClose").addEventListener("click", () => { browserPanel.hidden = true; $("browserBtn").classList.remove("active"); });
+
+// tool_result de browser_* → alimenta painel (url, screenshot, passos)
+function feedBrowserPanel(name, resultText) {
+  if (!name.startsWith("browser_")) return;
+  let d = null;
+  try { d = JSON.parse(resultText); } catch { d = null; }
+  const li = document.createElement("li");
+  li.innerHTML = `<span class="tl-node dim">${TL_SVG.dot}</span><div class="tl-content"><span class="tl-text"><b>${esc(name)}</b>${d?.title ? " · " + esc(d.title) : ""}</span><span class="tl-time">${fmtTime(Date.now())}</span></div>`;
+  if (d?.screenshot) {
+    li.innerHTML = `<span class="tl-node ok">${TL_SVG.check}</span><div class="tl-content"><span class="tl-text"><b>${esc(name)}</b> · <span class="mono">${esc(d.screenshot)}</span></span><span class="tl-time">${fmtTime(Date.now())}</span></div>`;
+  }
+  bpSteps.prepend(li);
+  if (d?.url) bpUrl.textContent = String(d.url).replace(/^https?:\/\//, "").slice(0, 40);
+  if (d?.screenshot) {
+    bpShot.src = `/api/file?path=${encodeURIComponent(d.screenshot)}`;
+    bpShotWrap.hidden = false;
+    // abre o painel sozinho na primeira evidência
+    if (browserPanel.hidden) { browserPanel.hidden = false; $("browserBtn").classList.add("active"); loadBrowserStatus(); }
+  }
+  if (name === "browser_open" && d?.mode === "lite" && d?.text) {
+    const li2 = document.createElement("li");
+    li2.innerHTML = `<span class="tl-node dim">${TL_SVG.corner}</span><div class="tl-content"><span class="tl-text">lite: ${esc(String(d.text).slice(0, 90))}…</span></div>`;
+    bpSteps.prepend(li2);
+  }
+}
+
 // ───────────────────────── status line ────────────────────
 function setStatus(txt, live) {
   statusLine.innerHTML = `<span class="s-dot${live ? " live" : ""}"></span><span class="s-txt ${live ? "s-live" : ""}">${esc(txt)}</span><span class="s-sep">·</span><span>localhost</span><span class="s-sep">·</span><span>dados locais</span>`;
@@ -210,6 +267,14 @@ function connectSSE() {
     "stall_detected", "continuation", "declare_done", "job_done", "job_failed", "job_paused", "notice"]) {
     es.addEventListener(t, (e) => handleEvent(t, JSON.parse(e.data)));
   }
+  es.addEventListener("browser_install", (e) => {
+    const d = JSON.parse(e.data);
+    if (d.done) { loadBrowserStatus(); }
+    else {
+      const el = $("bpProg");
+      if (el) el.textContent = `${d.pct}% · ${d.mb}MB`;
+    }
+  });
   es.addEventListener("content_delta", (e) => {
     const d = JSON.parse(e.data);
     if (!state.streamEl) state.streamEl = addMsg("agent", "", Date.now());
@@ -256,7 +321,9 @@ function handleEvent(type, d) {
       chipUpdate(d.name, d.args && d.args.path ? d.args.path : d.args && d.args.command ? String(d.args.command).slice(0, 40) : "");
       setStatus(`executando ${d.name}…`, true); break;
     case "tool_result":
-      chipDone(d.name, d.ok); break;
+      chipDone(d.name, d.ok);
+      feedBrowserPanel(d.name, String(d.result || ""));
+      break;
     case "failover":
       chipUpdate("router", `${d.from.split("/").pop()}→${d.to.split("/").pop()}`); chipDone("router"); break;
     case "auto_resume":

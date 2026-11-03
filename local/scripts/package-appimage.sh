@@ -16,6 +16,10 @@ mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/agentforge" "$APPDIR/usr/share/ico
 
 cp "$DIST/agentforge-local" "$APPDIR/usr/bin/"
 cp -r "$DIST/web" "$APPDIR/usr/share/agentforge/web"
+# F4: playwright-core EXTERNO ao binário (bundle quebra no chromium-bidi) —
+# o daemon resolve em runtime de usr/share/agentforge/node_modules
+mkdir -p "$APPDIR/usr/share/agentforge/node_modules"
+cp -r node_modules/playwright-core "$APPDIR/usr/share/agentforge/node_modules/"
 cp assets/icon.png "$APPDIR/usr/share/icons/hicolor/512x512/apps/agentforge-local.png"
 cp assets/icon.png "$APPDIR/agentforge-local.png"
 ln -sf agentforge-local.png "$APPDIR/.DirIcon"

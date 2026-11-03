@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSy
 import { join, resolve, dirname, isAbsolute } from "node:path";
 import { workspaceRoot } from "../paths";
 import { executeSearchTool } from "./search-impl";
+import { executeBrowserTool } from "./browser-impl";
 
 export type ToolResult = { ok: boolean; result?: string; error?: string };
 
@@ -103,6 +104,9 @@ export async function executeTool(name: string, args: Record<string, unknown>): 
         // tools de busca (Agente 1) — implementadas em search-impl.ts
         const r = await executeSearchTool(name, args);
         if (r !== null) return r;
+        // tools de browser (F4) — runtime Playwright on-demand + modo LITE
+        const b = await executeBrowserTool(name, args);
+        if (b !== null) return b;
         return { ok: false, error: `tool desconhecida: ${name}` };
       }
     }

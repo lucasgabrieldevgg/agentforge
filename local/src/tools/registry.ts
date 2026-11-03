@@ -9,6 +9,7 @@ export type ToolDef = {
 };
 
 import { SEARCH_TOOLS } from "./search";
+import { BROWSER_TOOLS } from "./browser";
 
 /** Tools de núcleo (arquivos/terminal/tempo) — responsabilidade do líder. */
 export const CORE_TOOLS: ToolDef[] = [
@@ -63,8 +64,8 @@ export const CORE_TOOLS: ToolDef[] = [
   },
 ];
 
-/** Catálogo completo: núcleo + busca (Agente 1) — mantenha nesta ordem. */
-export const TOOLS: ToolDef[] = [...CORE_TOOLS, ...SEARCH_TOOLS];
+/** Catálogo completo: núcleo + busca + browser — mantenha nesta ordem. */
+export const TOOLS: ToolDef[] = [...CORE_TOOLS, ...SEARCH_TOOLS, ...BROWSER_TOOLS];
 
 /** Schemas no formato OpenAI/OpenRouter function calling. */
 export function toolSchemas() {
