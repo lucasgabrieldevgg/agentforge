@@ -6,7 +6,8 @@ import {
   allSettings, setSetting, getSetting, addMessage, allMessages, listJobs, getJob,
   jobEvents, globalEvents, clearConversation, createJob, now,
 } from "./db";
-import { RANKED_MODELS, DEFAULT_MODEL, healthSnapshot } from "./providers";
+import { RANKED_MODELS, DEFAULT_MODEL, healthSnapshot, availableModels, type Auth } from "./providers";
+import { DIRECT_PROVIDERS } from "./providers-direct";
 import { Supervisor, stopJob, recoverOrphans, type UiEvent } from "./supervisor";
 import { allowlist } from "./tools/executor";
 import { workspaceRoot } from "./paths";
@@ -96,17 +97,30 @@ export function makeServer(port: number) {
       if (p === "/api/state" && req.method === "GET") {
         const s = allSettings();
         const key = s.openrouter_key ?? "";
+        const auth: Auth = {
+          openrouter: key || undefined,
+          groq: s.groq_key || undefined,
+          "google-ai": s.google_ai_key || undefined,
+          "github-models": s.github_models_key || undefined,
+        };
         return json({
           version: APP_VERSION,
           settings: {
-            has_key: key.length > 0,
+            has_key: !!(key || s.groq_key || s.google_ai_key || s.github_models_key),
             key_masked: key ? key.slice(0, 7) + "…" + key.slice(-4) : "",
             preferred_model: s.preferred_model ?? DEFAULT_MODEL,
             continuous_mode: (s.continuous_mode ?? "false") === "true",
             thinking_mode: s.thinking_mode ?? "high",
             max_iterations: parseInt(s.max_iterations ?? "12", 10),
           },
-          models: RANKED_MODELS,
+          models: availableModels(auth),
+          providers: DIRECT_PROVIDERS.map(p => ({
+            id: p.id, baseUrl: p.baseUrl, label: p.id,
+            has_key: !!(s[p.settingKey] ?? "").trim(),
+            key_masked: (s[p.settingKey] ?? "") ? (s[p.settingKey] ?? "").slice(0, 5) + "…" + (s[p.settingKey] ?? "").slice(-3) : "",
+            setting_key: p.settingKey,
+            models: p.models.map(m => ({ id: m.id, label: m.label, caps: m.caps, context: m.context })),
+          })),
           health: healthSnapshot(),
           workspace: workspaceRoot(),
           allowlist: allowlist(),
@@ -115,7 +129,7 @@ export function makeServer(port: number) {
 
       if (p === "/api/settings" && req.method === "POST") {
         const body = await req.json().catch(() => ({}));
-        const allowed = ["openrouter_key", "preferred_model", "continuous_mode", "thinking_mode", "max_iterations", "allowlist"];
+        const allowed = ["openrouter_key", "groq_key", "google_ai_key", "github_models_key", "preferred_model", "continuous_mode", "thinking_mode", "max_iterations", "allowlist"];
         for (const k of allowed) if (k in body) {
           if (k === "allowlist" && Array.isArray(body[k])) {
             process.env.AGENTFORGE_ALLOWLIST = body[k].join(",");

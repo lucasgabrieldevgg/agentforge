@@ -182,6 +182,22 @@
           <p class="field-help">gratuita em <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">openrouter.ai/keys</a> · fica só no seu computador</p>
         </div>
         <div class="field">
+          <label>Providers diretos <span class="mono dim">(opcional — mais velocidade e visão)</span></label>
+          <div class="field-row">
+            <input id="setGroq" type="password" placeholder="Groq · gsk_…" autocomplete="off">
+            <a class="mini-link" href="https://console.groq.com/keys" target="_blank" rel="noreferrer">pegar</a>
+          </div>
+          <div class="field-row">
+            <input id="setGoogle" type="password" placeholder="Google AI Studio · AIza…" autocomplete="off">
+            <a class="mini-link" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">pegar</a>
+          </div>
+          <div class="field-row">
+            <input id="setGithub" type="password" placeholder="GitHub Models · ghp_… (PAT)" autocomplete="off">
+            <a class="mini-link" href="https://github.com/settings/tokens" target="_blank" rel="noreferrer">pegar</a>
+          </div>
+          <p class="field-help">com chave, os modelos diretos entram no ranking do router e assumem se o OpenRouter cair</p>
+        </div>
+        <div class="field">
           <label for="setMaxIter">Máximo de iterações por job</label>
           <input id="setMaxIter" type="number" min="2" max="64" value="12">
           <p class="field-help">quantas rodadas de ferramenta o supervisor permite antes de pausar</p>

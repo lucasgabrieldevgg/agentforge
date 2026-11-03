@@ -9,7 +9,7 @@ const jobPanel = $("jobPanel"), jpId = $("jpId"), jpStatus = $("jpStatus"), jpMe
 const settingsModal = $("settingsModal"), emptyState = $("emptyState");
 
 let state = {
-  models: [], hasKey: false, continuous: false,
+  models: [], providers: [], hasKey: false, continuous: false,
   jobId: null, running: false,
   streamEl: null,        // elemento .msg-body que recebe deltas
   thinkEl: null,         // thinking block do turno atual
@@ -23,8 +23,17 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 async function loadState() {
   const r = await fetch("/api/state").then((r) => r.json());
   state.models = r.models; state.hasKey = r.settings.has_key; state.continuous = r.settings.continuous_mode;
-  modelSel.innerHTML = r.models.map((m) =>
-    `<option value="${esc(m.id)}" ${m.id === r.settings.preferred_model ? "selected" : ""}>${esc(m.name)}</option>`).join("");
+  // select agrupado por provider (OpenRouter + diretos configurados)
+  const groups = new Map();
+  for (const m of r.models) {
+    const g = m.providerLabel || m.provider || "outros";
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(m);
+  }
+  modelSel.innerHTML = [...groups.entries()].map(([g, ms]) =>
+    `<optgroup label="${esc(g)}">${ms.map((m) =>
+      `<option value="${esc(m.id)}" ${m.id === r.settings.preferred_model ? "selected" : ""}>${esc(m.name)}</option>`).join("")}</optgroup>`).join("");
+  state.providers = r.providers || [];
   thinkSel.value = r.settings.thinking_mode;
   continuousBtn.setAttribute("aria-pressed", String(state.continuous));
   $("setWorkspace").value = r.workspace;
@@ -346,6 +355,11 @@ async function refreshJobPanel(id) {
 $("settingsBtn").addEventListener("click", async () => {
   const r = await fetch("/api/state").then((r) => r.json());
   $("setKey").value = ""; $("setKey").placeholder = r.settings.has_key ? r.settings.key_masked : "sk-or-v1-…";
+  const ph = (id, prov, ph) => { $(id).value = ""; $(id).placeholder = prov.has_key ? prov.key_masked : ph; };
+  const prov = (id) => (r.providers || []).find((p) => p.setting_key === id) || { has_key: false, key_masked: "" };
+  ph("setGroq", prov("groq_key"), "Groq · gsk_…");
+  ph("setGoogle", prov("google_ai_key"), "Google AI Studio · AIza…");
+  ph("setGithub", prov("github_models_key"), "GitHub Models · ghp_… (PAT)");
   $("setMaxIter").value = r.settings.max_iterations;
   settingsModal.showModal();
 });
@@ -361,6 +375,10 @@ $("settingsSave").addEventListener("click", async () => {
   };
   const key = $("setKey").value.trim();
   if (key) patch.openrouter_key = key;
+  for (const [id, k] of [["setGroq", "groq_key"], ["setGoogle", "google_ai_key"], ["setGithub", "github_models_key"]]) {
+    const v = $(id).value.trim();
+    if (v) patch[k] = v;
+  }
   const allow = $("setAllow").value.split(",").map((s) => s.trim()).filter(Boolean);
   if (allow.length) patch.allowlist = allow;
   await save(patch);

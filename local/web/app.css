@@ -532,3 +532,7 @@ li .tl-text .tl-done { color: var(--accent-hi); font-weight: 600; }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   .chat { scroll-behavior: auto; }
 }
+
+/* ─── providers diretos (F2) ─── */
+.mini-link { font-size: 11px; color: var(--acc, #3adc9c); text-decoration: none; border: 1px solid rgba(58,220,156,.25); border-radius: 6px; padding: 3px 8px; white-space: nowrap; }
+.mini-link:hover { background: rgba(58,220,156,.08); }

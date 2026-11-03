@@ -2,8 +2,9 @@
 import { toolsManual } from "./tools/registry";
 import type { ChatMessage } from "./providers";
 import { RANKED_MODELS } from "./providers";
+import { directModelsFlat } from "./providers-direct";
 
-export const APP_VERSION = "0.2.0";
+export const APP_VERSION = "0.2.1";
 
 export function buildSystemPrompt(opts: {
   continuous: boolean;
@@ -77,5 +78,7 @@ export function historyToMessages(rows: import("./db").MsgRow[], limitTurns = 24
 }
 
 export function modelLabel(id: string): string {
-  return RANKED_MODELS.find(m => m.id === id)?.name ?? id;
+  return RANKED_MODELS.find(m => m.id === id)?.name
+    ?? directModelsFlat().find(m => m.id === id)?.label
+    ?? id;
 }

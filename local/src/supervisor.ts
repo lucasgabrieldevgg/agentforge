@@ -5,7 +5,7 @@ import {
 } from "./db";
 import { workspaceRoot } from "./paths";
 import { buildSystemPrompt, historyToMessages, extractThinking } from "./engine";
-import { streamWithFailover, recordOk, healthSnapshot, DEFAULT_MODEL, type ChatMessage, type StreamEvent, type ToolCall } from "./providers";
+import { streamWithFailover, recordOk, healthSnapshot, DEFAULT_MODEL, type Auth, type ChatMessage, type StreamEvent, type ToolCall } from "./providers";
 import { toolSchemas } from "./tools/registry";
 import { executeTool, allowlist } from "./tools/executor";
 
@@ -43,11 +43,18 @@ export class Supervisor {
     const maxIter = parseInt(cfg("max_iterations", "12"), 10);
     const continuous = cfg("continuous_mode", "false") === "true";
     const thinkingMode = (cfg("thinking_mode", "high") as "off" | "quick" | "high");
-    const apiKey = cfg("openrouter_key", "");
+    // F2: auth misto — OpenRouter + providers diretos (Groq, Google AI, GitHub Models)
+    const auth: Auth = {
+      openrouter: cfg("openrouter_key", "").trim() || undefined,
+      groq: cfg("groq_key", "").trim() || undefined,
+      "google-ai": cfg("google_ai_key", "").trim() || undefined,
+      "github-models": cfg("github_models_key", "").trim() || undefined,
+    };
     let model = cfg("preferred_model", DEFAULT_MODEL);
 
-    if (!apiKey) {
-      this.ev(jobId, "job_failed", { error: "Configure sua chave da OpenRouter nas configurações (botão ⚙)." });
+    const hasAnyKey = !!(auth.openrouter || auth.groq || auth["google-ai"] || auth["github-models"]);
+    if (!hasAnyKey) {
+      this.ev(jobId, "job_failed", { error: "Configure ao menos uma chave nas configurações (⚙): OpenRouter, Groq, Google AI Studio ou GitHub Models — todas têm tier gratuito." });
       updateJob(jobId, { status: "failed", error: "sem API key" });
       return;
     }
@@ -87,7 +94,7 @@ export class Supervisor {
         let finish = "";
 
         try {
-          for await (const ev of streamWithFailover(apiKey, model, {
+          for await (const ev of streamWithFailover(auth, model, {
             messages, tools: toolSchemas(), signal: ac.signal,
             stallTimeoutMs: 45_000,
             maxTokens: 8192,
