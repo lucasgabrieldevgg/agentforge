@@ -18,9 +18,25 @@ export function ensureDirs(): void {
   mkdirSync(DEFAULT_WORKSPACE, { recursive: true });
 }
 
+// ---------- projeto ativo (dados reunidos e gerenciados) ----------
+// Projeto != "geral" → workspace próprio em workspace/projects/<id>/
+// (jail, terminal, evidências do browser e /api/file seguem junto)
+let activeProjectId: string | null = null;
+export function setActiveProject(id: string | null): string {
+  activeProjectId = id && id !== "geral" ? id : null;
+  const root = workspaceRoot();
+  mkdirSync(root, { recursive: true });
+  return root;
+}
+export function activeProject(): string | null {
+  return activeProjectId;
+}
+
 /** Resolve o workspace configurado (com fallback pro padrão). */
 export function workspaceRoot(): string {
-  return resolve(process.env.AGENTFORGE_WORKSPACE || DEFAULT_WORKSPACE);
+  const base = resolve(process.env.AGENTFORGE_WORKSPACE || DEFAULT_WORKSPACE);
+  if (activeProjectId) return join(base, "projects", activeProjectId);
+  return base;
 }
 
 /** Resolve web dir: env → relativo ao binário → cwd. */

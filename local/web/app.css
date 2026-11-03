@@ -544,3 +544,21 @@ li .tl-text .tl-done { color: var(--accent-hi); font-weight: 600; }
 .bp-warn { color: #e8b64c; font-weight: 600; }
 .bp-shotwrap { padding: 10px 14px; border-bottom: 1px solid var(--line, rgba(255,255,255,.06)); }
 .bp-shotwrap img { width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,.08); display: block; }
+
+/* ─── projetos e artefatos (dados gerenciados) ─── */
+.projectpanel { min-width: 320px; max-width: 380px; }
+.pp-list { max-height: 220px; overflow-y: auto; padding: 6px 10px; border-bottom: 1px solid var(--line, rgba(255,255,255,.06)); }
+.pp-job { display: flex; align-items: center; gap: 8px; padding: 7px 6px; border-radius: 8px; cursor: pointer; font-size: 12.5px; }
+.pp-job:hover { background: rgba(255,255,255,.04); }
+.pp-job-st { width: 14px; text-align: center; }
+.pp-job-st.ok { color: #3adc9c; } .pp-job-st.err { color: #ff6b6b; } .pp-job-st.warn { color: #e8b64c; } .pp-job-st.live { color: #3adc9c; animation: pulse 1.4s infinite; }
+.pp-job-goal { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-job-meta { font-size: 10.5px; opacity: .55; }
+.pp-section { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.pp-title { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; opacity: .55; padding: 10px 14px 6px; }
+.pp-artifacts { overflow-y: auto; padding: 0 10px 10px; list-style: none; margin: 0; }
+.pp-art { display: flex; align-items: center; gap: 8px; padding: 7px 6px; border-radius: 8px; cursor: pointer; font-size: 12px; }
+.pp-art:hover { background: rgba(255,255,255,.04); }
+.pp-art-ico { color: #3adc9c; display: inline-flex; }
+.pp-art-path { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.pp-art-meta { font-size: 10.5px; opacity: .55; white-space: nowrap; }

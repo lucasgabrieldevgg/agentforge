@@ -1,11 +1,13 @@
 // AgentForge Local — executor de tools: tudo local, com path jail e allowlist de terminal
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync } from "node:fs";
 import { join, resolve, dirname, isAbsolute } from "node:path";
-import { workspaceRoot } from "../paths";
+import { workspaceRoot, activeProject } from "../paths";
+import { addArtifact } from "../db";
 import { executeSearchTool } from "./search-impl";
 import { executeBrowserTool } from "./browser-impl";
 
 export type ToolResult = { ok: boolean; result?: string; error?: string };
+export type ToolCtx = { jobId?: string; projectId?: string }; // p/ indexar artefatos
 
 const MAX_READ = 200 * 1024;
 
@@ -59,7 +61,7 @@ export async function executeTerminal(command: string, timeoutS = 60): Promise<T
 }
 
 // ---------- dispatcher ----------
-export async function executeTool(name: string, args: Record<string, unknown>): Promise<ToolResult> {
+export async function executeTool(name: string, args: Record<string, unknown>, ctx: ToolCtx = {}): Promise<ToolResult> {
   try {
     switch (name) {
       case "fs_write": {
@@ -67,8 +69,10 @@ export async function executeTool(name: string, args: Record<string, unknown>): 
         if (!path) return { ok: false, error: "path obrigatório" };
         const abs = jailed(path);
         mkdirSync(dirname(abs), { recursive: true });
-        writeFileSync(abs, String(args.content ?? ""), "utf8");
-        return { ok: true, result: `salvo: ${path} (${String(args.content ?? "").length} bytes)` };
+        const content = String(args.content ?? "");
+        writeFileSync(abs, content, "utf8");
+        indexArtifact(ctx, path, Buffer.byteLength(content), "write");
+        return { ok: true, result: `salvo: ${path} (${content.length} bytes)` };
       }
       case "fs_read": {
         const abs = jailed(String(args.path ?? ""));
@@ -106,11 +110,31 @@ export async function executeTool(name: string, args: Record<string, unknown>): 
         if (r !== null) return r;
         // tools de browser (F4) — runtime Playwright on-demand + modo LITE
         const b = await executeBrowserTool(name, args);
-        if (b !== null) return b;
+        if (b !== null) {
+          // screenshot → artefato indexado (evidência do projeto)
+          if (b.ok && name === "browser_screenshot") {
+            try {
+              const d = JSON.parse(b.result ?? "{}");
+              if (d.screenshot) indexArtifact(ctx, d.screenshot, d.bytes ?? 0, "screenshot");
+            } catch {}
+          }
+          return b;
+        }
         return { ok: false, error: `tool desconhecida: ${name}` };
       }
     }
   } catch (e: any) {
     return { ok: false, error: e?.message ?? String(e) };
   }
+}
+
+/** Indexa artefato produzido pelo agente (dados reunidos por projeto). */
+function indexArtifact(ctx: ToolCtx, path: string, bytes: number, op: string): void {
+  try {
+    addArtifact({
+      project_id: ctx.projectId ?? activeProject() ?? "geral",
+      job_id: ctx.jobId,
+      path, bytes, op,
+    });
+  } catch { /* índice nunca derruba a tool */ }
 }

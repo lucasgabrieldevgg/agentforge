@@ -5,11 +5,14 @@ const $ = (id) => document.getElementById(id);
 const chatInner = $("chatInner"), chatScroll = $("chatScroll"), activityBar = $("activityBar");
 const input = $("input"), sendBtn = $("sendBtn"), stopBtn = $("stopBtn"), statusLine = $("statusLine");
 const modelSel = $("modelSel"), thinkSel = $("thinkSel"), continuousBtn = $("continuousBtn");
+const projectSel = $("projectSel"), newProjectBtn = $("newProjectBtn");
+const projectPanel = $("projectPanel"), ppActive = $("ppActive"), ppList = $("ppList"), ppArtifacts = $("ppArtifacts");
 const jobPanel = $("jobPanel"), jpId = $("jpId"), jpStatus = $("jpStatus"), jpMeta = $("jpMeta"), jpGoal = $("jpGoal"), jpTimeline = $("jpTimeline");
 const settingsModal = $("settingsModal"), emptyState = $("emptyState");
 
 let state = {
   models: [], providers: [], hasKey: false, continuous: false,
+  projects: [], activeProject: null,
   jobId: null, running: false,
   streamEl: null,        // elemento .msg-body que recebe deltas
   thinkEl: null,         // thinking block do turno atual
@@ -250,6 +253,77 @@ function feedBrowserPanel(name, resultText) {
   }
 }
 
+// ───────────────────────── projetos (dados gerenciados) ──
+async function loadProjects() {
+  const r = await fetch("/api/projects").then((r) => r.json());
+  state.projects = r.projects || [];
+  state.activeProject = r.active;
+  projectSel.innerHTML = state.projects.map((p) =>
+    `<option value="${esc(p.id)}" ${p.id === r.active ? "selected" : "">}${esc(p.name)} <span class='dim'>(${p.jobs}j/${p.artifacts}a)</span></option>`).join("");
+  const act = state.projects.find((p) => p.id === r.active);
+  ppActive.textContent = act ? act.name : "";
+  if (state.projects.find((p) => p.id === r.active)) renderProjectDetail(r.active);
+}
+async function renderProjectDetail(id) {
+  const r = await fetch(`/api/projects/${id}`).then((r) => r.json());
+  if (!r.project) return;
+  ppActive.textContent = r.project.name;
+  const stMap = { done: ["✓", "ok"], failed: ["✕", "err"], paused: ["⏸", "warn"], running: ["●", "live"], queued: ["·", "dim"] };
+  ppList.innerHTML = (r.jobs || []).slice(0, 20).map((j) => {
+    const [ico, cls] = stMap[j.status] || ["·", "dim"];
+    return `<div class="pp-job" data-job="${esc(j.id)}" title="${esc(j.goal).slice(0, 120)}">
+      <span class="pp-job-st ${cls}">${ico}</span>
+      <span class="pp-job-goal">${esc(j.goal.slice(0, 60))}</span>
+      <span class="pp-job-meta mono">${new Date(j.updated_at).toLocaleDateString("pt-BR")}</span>
+    </div>`;
+  }).join("") || "<p class='field-help'>nenhum job neste projeto ainda</p>";
+  ppList.querySelectorAll(".pp-job").forEach((el) =>
+    el.addEventListener("click", () => {
+      state.jobId = el.dataset.job;
+      jobPanel.hidden = false;
+      refreshJobPanel(state.jobId);
+    }));
+  ppArtifacts.innerHTML = (r.artifacts || []).map((a) => {
+    const isImg = /\.(png|jpe?g|svg)$/i.test(a.path);
+    return `<li class="pp-art" data-path="${esc(a.path)}" data-img="${isImg}">
+      <span class="pp-art-ico">${isImg ? TL_SVG.square : TL_SVG.check}</span>
+      <span class="pp-art-path mono">${esc(a.path)}</span>
+      <span class="pp-art-meta mono">${a.op === "screenshot" ? "evidência" : "arquivo"} · ${Math.max(1, Math.round(a.bytes / 1024))}KB</span>
+    </li>`;
+  }).join("") || "<p class='field-help'>nada produzido ainda</p>";
+  ppArtifacts.querySelectorAll(".pp-art").forEach((el) =>
+    el.addEventListener("click", () => {
+      if (el.dataset.img === "true") {
+        bpShot.src = `/api/file?path=${encodeURIComponent(el.dataset.path)}`;
+        bpShotWrap.hidden = false;
+        browserPanel.hidden = false;
+        $("browserBtn").classList.add("active");
+      } else {
+        fetch(`/api/file?path=${encodeURIComponent(el.dataset.path)}`).then((r) => r.text()).then((t) => {
+          addMsg("agent", `📄 ${el.dataset.path}\n\n${t.slice(0, 2000)}`, Date.now());
+        });
+      }
+    }));
+}
+projectSel.addEventListener("change", async () => {
+  await fetch("/api/projects/active", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: projectSel.value }) });
+  await loadState();
+  await loadProjects();
+});
+newProjectBtn.addEventListener("click", async () => {
+  const name = prompt("Nome do novo projeto (workspace próprio):", "");
+  if (!name || !name.trim()) return;
+  await fetch("/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim() }) });
+  await loadState();
+  await loadProjects();
+});
+$("projectsBtn").addEventListener("click", () => {
+  projectPanel.hidden = !projectPanel.hidden;
+  $("projectsBtn").classList.toggle("active", !projectPanel.hidden);
+  if (!projectPanel.hidden) loadProjects();
+});
+$("projectPanelClose").addEventListener("click", () => { projectPanel.hidden = true; $("projectsBtn").classList.remove("active"); });
+
 // ───────────────────────── status line ────────────────────
 function setStatus(txt, live) {
   statusLine.innerHTML = `<span class="s-dot${live ? " live" : ""}"></span><span class="s-txt ${live ? "s-live" : ""}">${esc(txt)}</span><span class="s-sep">·</span><span>localhost</span><span class="s-sep">·</span><span>dados locais</span>`;
@@ -267,6 +341,7 @@ function connectSSE() {
     "stall_detected", "continuation", "declare_done", "job_done", "job_failed", "job_paused", "notice"]) {
     es.addEventListener(t, (e) => handleEvent(t, JSON.parse(e.data)));
   }
+  es.addEventListener("project_switch", () => { loadState(); loadProjects(); });
   es.addEventListener("browser_install", (e) => {
     const d = JSON.parse(e.data);
     if (d.done) { loadBrowserStatus(); }
@@ -466,6 +541,7 @@ $("shutdownBtn").addEventListener("click", async () => {
 // ───────────────────────── boot ───────────────────────────
 loadState().then(() => {
   loadHistory();
+  loadProjects();
   connectSSE();
   // retoma o job mais recente se ainda estiver ativo (ex.: reload no meio do trabalho)
   fetch("/api/jobs").then((r) => r.json()).then(({ jobs }) => {

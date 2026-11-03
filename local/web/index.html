@@ -37,6 +37,9 @@
         <button id="browserBtn" class="rail-btn" title="Navegador do agente">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="7.2" stroke="currentColor" stroke-width="1.5"/><path d="M1.8 9h14.4M9 1.8c-2.6 2.4-2.6 12 0 14.4M9 1.8c2.6 2.4 2.6 12 0 14.4" stroke="currentColor" stroke-width="1.3"/></svg>
         </button>
+        <button id="projectsBtn" class="rail-btn" title="Projetos e artefatos">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M1.8 4.6A1.4 1.4 0 0 1 3.2 3.2h3.4l1.6 2h6.6a1.4 1.4 0 0 1 1.4 1.4v7.8a1.4 1.4 0 0 1-1.4 1.4H3.2a1.4 1.4 0 0 1-1.4-1.4V4.6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        </button>
       </div>
       <div class="rail-foot">
         <span class="rail-dot" id="daemonDot" title="daemon"></span>
@@ -56,6 +59,11 @@
           <span class="zone-meta mono" id="wsPath" title="workspace">workspace</span>
         </div>
         <div class="topbar-controls">
+          <label class="ctl" title="Projeto ativo — jobs, arquivos e evidências ficam reunidos aqui">
+            <span class="ctl-label">projeto</span>
+            <select id="projectSel" class="ctl-select mono"></select>
+          </label>
+          <button id="newProjectBtn" class="ctl-toggle" title="Criar novo projeto (workspace próprio)">+ projeto</button>
           <label class="ctl" title="Modelo preferido — o router troca sozinho se falhar">
             <span class="ctl-label">modelo</span>
             <select id="modelSel" class="ctl-select mono"></select>
@@ -150,6 +158,21 @@
             <img id="bpShot" alt="screenshot do navegador do agente" />
           </div>
           <ol class="jobpanel-timeline" id="bpSteps"></ol>
+        </aside>
+        <!-- painel de projetos e artefatos (dados gerenciados) -->
+        <aside class="jobpanel projectpanel" id="projectPanel" hidden>
+          <div class="jobpanel-head">
+            <span class="jp-title mono">projetos</span>
+            <span class="jp-id mono" id="ppActive"></span>
+            <button class="jp-close" id="projectPanelClose" title="fechar" aria-label="fechar painel">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="pp-list" id="ppList"></div>
+          <div class="pp-section">
+            <span class="pp-title mono">artefatos do projeto</span>
+            <ol class="pp-artifacts" id="ppArtifacts"></ol>
+          </div>
         </aside>
       </main>
 

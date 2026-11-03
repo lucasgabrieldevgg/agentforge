@@ -157,7 +157,7 @@ export class Supervisor {
             catch { this.ev(jobId, "tool_result", { name: tc.function.name, ok: false, error: "argumentos JSON inválidos" }); }
 
             this.ev(jobId, "tool_start", { name: tc.function.name, args });
-            const res = await executeTool(tc.function.name, args);
+            const res = await executeTool(tc.function.name, args, { jobId, projectId: job.project_id ?? undefined });
             this.ev(jobId, "tool_result", { name: tc.function.name, ok: res.ok, result: (res.result ?? res.error ?? "").slice(0, 4000), args });
             addMessage({
               job_id: jobId, role: "tool", tool_call_id: tc.id, name: tc.function.name,

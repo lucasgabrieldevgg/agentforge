@@ -5,16 +5,15 @@ import { webRoot } from "./paths";
 import {
   allSettings, setSetting, getSetting, addMessage, allMessages, listJobs, getJob,
   jobEvents, globalEvents, clearConversation, createJob, now,
+  ensureDefaultProject, createProject, listProjects, getProject, listArtifacts,
 } from "./db";
+import { activeProject, setActiveProject as setWsProject, workspaceRoot } from "./paths";
 import { RANKED_MODELS, DEFAULT_MODEL, healthSnapshot, availableModels, type Auth } from "./providers";
 import { DIRECT_PROVIDERS } from "./providers-direct";
 import { Supervisor, stopJob, recoverOrphans, type UiEvent } from "./supervisor";
 import { allowlist } from "./tools/executor";
 import { browserStatus, installBrowser } from "./tools/browser-impl";
-import { workspaceRoot } from "./paths";
 import { APP_VERSION } from "./engine";
-import { readFileSync, existsSync } from "node:fs";
-import { join, resolve, extname } from "node:path";
 
 // ---------- event bus (SSE) ----------
 const sseClients = new Set<{ jobId: string | null; send: (e: UiEvent) => void }>();
@@ -28,6 +27,16 @@ function emit(e: UiEvent) {
 }
 
 const supervisor = new Supervisor(emit);
+
+// boot de dados: projeto padrão + restaura o ativo salvo
+ensureDefaultProject();
+{
+  const saved = getSetting("active_project");
+  if (saved && getProject(saved)) setWsProject(saved);
+}
+function activeProjectId(): string {
+  return activeProject() ?? "geral";
+}
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -187,7 +196,7 @@ export function makeServer(port: number) {
         const message = String(body.message ?? "").trim();
         if (!message) return json({ error: "mensagem vazia" }, 400);
         const model = getSetting("preferred_model") ?? DEFAULT_MODEL;
-        const job = createJob(message, model);
+        const job = createJob(message, model, activeProjectId());
         addMessage({ job_id: job.id, role: "user", content: message });
         supervisor.start(job, message);
         return json({ jobId: job.id });
@@ -200,7 +209,38 @@ export function makeServer(port: number) {
       }
 
       if (p === "/api/jobs" && req.method === "GET") {
-        return json({ jobs: listJobs() });
+        return json({ jobs: listJobs(50, activeProjectId()) });
+      }
+
+      // ---------- projects (dados reunidos e gerenciados) ----------
+      if (p === "/api/projects" && req.method === "GET") {
+        return json({ projects: listProjects(), active: activeProjectId() });
+      }
+      if (p === "/api/projects" && req.method === "POST") {
+        const body = await req.json().catch(() => ({}));
+        const name = String(body.name ?? "").trim();
+        if (!name) return json({ error: "nome obrigatório" }, 400);
+        const proj = createProject(name.slice(0, 60));
+        setWsProject(proj.id);
+        setSetting("active_project", proj.id);
+        emit({ type: "project_switch", jobId: null, data: { id: proj.id, name: proj.name }, ts: Date.now() });
+        return json({ ok: true, project: proj, workspace: workspaceRoot() });
+      }
+      if (p === "/api/projects/active" && req.method === "POST") {
+        const body = await req.json().catch(() => ({}));
+        const id = String(body.id ?? "");
+        const proj = getProject(id);
+        if (!proj) return json({ error: "projeto não existe" }, 404);
+        setWsProject(id);
+        setSetting("active_project", id);
+        emit({ type: "project_switch", jobId: null, data: { id, name: proj.name }, ts: Date.now() });
+        return json({ ok: true, project: proj, workspace: workspaceRoot() });
+      }
+      if (p.startsWith("/api/projects/") && req.method === "GET") {
+        const id = p.split("/")[3];
+        const proj = getProject(id);
+        if (!proj) return json({ error: "projeto não existe" }, 404);
+        return json({ project: proj, jobs: listJobs(50, id), artifacts: listArtifacts(id) });
       }
 
       if (p.startsWith("/api/jobs/") && req.method === "GET") {
