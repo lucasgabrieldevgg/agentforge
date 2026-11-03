@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentForge · local</title>
+  <link rel="icon" href="/logo.svg" type="image/svg+xml">
+  <link rel="preload" href="/fonts/PlexSans-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/PlexSans-600.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/fonts.css">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <!-- ─── topbar ─────────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 30 30" width="26" height="26" aria-hidden="true">
+        <rect width="30" height="30" rx="6" fill="#0a0e14"/>
+        <rect x="2" y="2" width="26" height="26" rx="5" fill="none" stroke="#10b981" stroke-width="1.5"/>
+        <text x="15" y="21" font-family="IBM Plex Mono, monospace" font-size="16" font-weight="700" fill="#10b981" text-anchor="middle">A</text>
+      </svg>
+      <span class="brand-name">AGENTFORGE</span>
+      <span class="brand-tag">local</span>
+    </div>
+    <div class="topbar-controls">
+      <label class="ctl" title="Modelo preferido (o router troca sozinho se falhar)">
+        <span class="ctl-label">modelo</span>
+        <select id="modelSel" class="ctl-select"></select>
+      </label>
+      <label class="ctl" title="Nível de raciocínio">
+        <span class="ctl-label">pensar</span>
+        <select id="thinkSel" class="ctl-select">
+          <option value="off">off</option>
+          <option value="quick">quick</option>
+          <option value="high" selected>high</option>
+        </select>
+      </label>
+      <button id="continuousBtn" class="ctl-toggle" title="Modo contínuo: o agente trabalha até declarar conclusão" aria-pressed="false">
+        <span class="toggle-dot" aria-hidden="true"></span> contínuo
+      </button>
+      <button id="jobsBtn" class="ctl-icon" title="Painel do job">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 3h12M2 8h12M2 13h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <button id="settingsBtn" class="ctl-icon" title="Configurações">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="2.4" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── corpo: chat + painel do job ────────────────────── -->
+  <main class="main">
+    <section class="chat" id="chatScroll">
+      <div class="chat-inner" id="chatInner">
+        <!-- estado vazio (primeira execução) -->
+        <div class="empty" id="emptyState">
+          <p class="empty-kicker">forja local pronta</p>
+          <h1 class="empty-title">O agente roda na sua máquina.<br>Ferramentas de verdade: arquivos, terminal, git.</h1>
+          <ul class="empty-suggestions">
+            <li><button class="sug" data-fill="Crie o arquivo notas.md no workspace com 3 ideias de app e commita com git.">Crie <code>notas.md</code> com ideias e commita</button></li>
+            <li><button class="sug" data-fill="Liste os arquivos do workspace e me explique a estrutura.">Liste o workspace e explique</button></li>
+            <li><button class="sug" data-fill="Qual a data e hora atual?">Que horas são?</button></li>
+          </ul>
+          <p class="empty-note" id="emptyKeyNote">configure sua chave da OpenRouter no ⚙ pra começar</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- painel do job (colapsável) -->
+    <aside class="jobpanel" id="jobPanel" hidden>
+      <div class="jobpanel-head">
+        <span class="jp-title">job</span>
+        <span class="jp-id mono" id="jpId">—</span>
+        <button class="jp-close" id="jobPanelClose" title="fechar" aria-label="fechar painel">×</button>
+      </div>
+      <div class="jobpanel-status">
+        <span class="jp-status" id="jpStatus">—</span>
+        <span class="jp-meta mono" id="jpMeta"></span>
+      </div>
+      <div class="jobpanel-goal" id="jpGoal"></div>
+      <ol class="jobpanel-timeline" id="jpTimeline"></ol>
+    </aside>
+  </main>
+
+  <!-- ─── activity bar efêmera ───────────────────────────── -->
+  <div class="activitybar" id="activityBar" aria-live="polite"></div>
+
+  <!-- ─── input ──────────────────────────────────────────── -->
+  <footer class="inputbar">
+    <div class="inputbar-row">
+      <textarea id="input" rows="1" placeholder="peça um trabalho pro agente…  (Enter envia · Shift+Enter quebra linha)"
+        autocomplete="off" spellcheck="false"></textarea>
+      <button id="sendBtn" class="send" title="enviar (Enter)">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 8l11-5.5L11 8l2.5 5.5L2.5 8z" fill="currentColor"/></svg>
+      </button>
+      <button id="stopBtn" class="stop" title="parar job atual" hidden>
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="1.5" y="1.5" width="9" height="9" rx="1.5" fill="currentColor"/></svg>
+      </button>
+    </div>
+    <div class="statusline mono" id="statusLine">parado</div>
+  </footer>
+
+  <!-- ─── modal de configurações ─────────────────────────── -->
+  <dialog id="settingsModal" class="modal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2>configurações</h2>
+        <button class="modal-close" id="settingsClose" aria-label="fechar">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label for="setKey">chave da OpenRouter</label>
+          <div class="field-row">
+            <input id="setKey" type="password" placeholder="sk-or-v1-…" autocomplete="off">
+            <button id="setKeyEye" class="mini" title="mostrar/ocultar">ver</button>
+          </div>
+          <p class="field-help">gratuita em <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">openrouter.ai/keys</a> · fica só no seu computador</p>
+        </div>
+        <div class="field">
+          <label for="setMaxIter">máximo de iterações por job</label>
+          <input id="setMaxIter" type="number" min="2" max="64" value="12">
+          <p class="field-help">quantas rodadas de ferramenta o supervisor permite antes de pausar</p>
+        </div>
+        <div class="field">
+          <label>allowlist do terminal <span class="mono dim">(um binário por linha)</span></label>
+          <textarea id="setAllow" rows="4" class="mono" spellcheck="false"></textarea>
+          <p class="field-help">comandos fora desta lista são bloqueados pelo executor</p>
+        </div>
+        <div class="field">
+          <label>workspace</label>
+          <input id="setWorkspace" class="mono" readonly>
+          <p class="field-help">jail de arquivos — tudo que o agente escreve fica aqui</p>
+        </div>
+        <div class="modal-danger">
+          <button id="clearBtn" class="danger">limpar conversa</button>
+          <button id="shutdownBtn" class="danger">encerrar app</button>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <span class="mono dim" id="verLine">agentforge local</span>
+        <button id="settingsSave" class="primary">salvar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -73,3 +73,9 @@ db/*.db
 # npm lockfile (this project uses bun)
 package-lock.json
 prisma/dev.db
+
+# AgentForge Local — artefatos de build (não versionar)
+local/dist/
+local/build/
+local/*.AppImage
+local/*.sha256
